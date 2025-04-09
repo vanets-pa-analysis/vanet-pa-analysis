@@ -1,5 +1,5 @@
 __pycache__/
-*.pyc
-output/*
-*.net.xml
-*.poly.xml
+# *.pyc
+# output/*
+# *.net.xml
+# *.poly.xml
