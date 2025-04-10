@@ -1,14 +1,15 @@
 import traci
 import networkx as nx
+import matplotlib.pyplot as plt
 
 from analysis.articulation import find_articulation_points
 from analysis.visualization import generate_heat_map
 from analysis.visualization import salvar_histograma
 
-DEBUGGING = True
-SUMO_BINARY = "sumo"  # ou "sumo-gui" se quiser ver
-NET_FILE = "net/bh.net.xml"
-ROUTE_FILE = "routes/bh.rou.xml"
+DEBUGGING = False
+SUMO_BINARY = "sumo-gui"  # ou "sumo-gui" se quiser ver
+NET_FILE = "net/santa_tereza.net.xml"
+ROUTE_FILE = "routes/santa_tereza.rou.xml"
 
 DISTANCE_THRESHOLD = 100  # metros
 
@@ -58,10 +59,9 @@ def main():
         traci.simulationStep()
         positions = get_vehicle_positions()
 
-        numberOfCars = len(list(positions.keys()))
-        sum += numberOfCars
-
         G = build_graph(positions)
+
+        sum += G.number_of_nodes()
 
         aps = find_articulation_points(G)
 
@@ -81,6 +81,11 @@ def main():
             geoPosAPs.append((lat, lon))
 
         step += 1
+
+        # if len(aps) > 20:
+        #     print(aps)
+        #     nx.draw(G, with_labels=True)  # Desenha com rótulos nos nós
+        #     plt.show()
 
     print(f"Avg cars on the map {sum / step}")
 
