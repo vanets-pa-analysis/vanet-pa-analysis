@@ -1,8 +1,8 @@
 Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
 
-Ajeitar os horários do histograma
+Ajeitar os horários do histograma DONE
 
-Incluir no histograma para cada horário informações sobre a rede
+Incluir no histograma para cada horário informações sobre a rede DONE
 
 Entender pq o mapa da contorno deu errado
 

@@ -6,10 +6,10 @@ from analysis.articulation import find_articulation_points
 from analysis.visualization import generate_heat_map
 from analysis.visualization import salvar_histograma
 
-DEBUGGING = False
+DEBUGGING = True
 SUMO_BINARY = "sumo-gui"  # ou "sumo-gui" se quiser ver
 NET_FILE = "net/santa_tereza.net.xml"
-ROUTE_FILE = "routes/santa_tereza.rou.xml"
+ROUTE_FILE = "routes/combined.rou.xml"
 
 DISTANCE_THRESHOLD = 100  # metros
 
@@ -49,14 +49,15 @@ def main():
 
     traci.start([SUMO_BINARY, "-n", NET_FILE, "-r", ROUTE_FILE])
     step = 0
+    SIM_STEP = 60  # segundos
     histogram = []
     geoPosAPs = []
 
     sum = 0
 
-    while traci.simulation.getMinExpectedNumber() > 0:
+    while traci.simulation.getMinExpectedNumber() > 0 and step < 1440:
 
-        traci.simulationStep()
+        traci.simulationStep(step * SIM_STEP)
         positions = get_vehicle_positions()
 
         G = build_graph(positions)
@@ -69,11 +70,11 @@ def main():
             print(f"Number of edges: {G.number_of_edges()}")
             print(f"Number of nodes: {G.number_of_nodes()}")
             print(f"Graph Density: {nx.density(G) * 100:.2f}%")
-            print(f"[t={step}s] {len(aps)} articulation points")
+            print(f"[Minute={step}] [Hour={int(step / 60)}] {len(aps)} articulation points")
             print("-----------------------------")
 
         # Salvar estatísticas
-        histogram.append(len(aps))
+        histogram.append((len(aps), G.number_of_nodes(), nx.density(G)))
 
         for vehicle in aps:
             x, y = positions[vehicle]
@@ -82,12 +83,12 @@ def main():
 
         step += 1
 
-        # if len(aps) > 20:
-        #     print(aps)
-        #     nx.draw(G, with_labels=True)  # Desenha com rótulos nos nós
-        #     plt.show()
+        if DEBUGGING and len(aps) > 21:
+            print(aps)
+            nx.draw(G, with_labels=True)  # Desenha com rótulos nos nós
+            plt.show()
 
-    print(f"Avg cars on the map {sum / step}")
+    print(f"Avg cars on the map {sum / step:.2f}")
 
     traci.close()
 
