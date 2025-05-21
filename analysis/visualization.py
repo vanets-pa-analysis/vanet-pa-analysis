@@ -1,6 +1,6 @@
 import folium
 import pandas as pd
-import pandas as pd
+import os
 import matplotlib.pyplot as plt
 
 from folium.plugins import HeatMap
@@ -24,32 +24,58 @@ def generate_heat_map(geoPosAPs):
     # Salvar o HTML interativo
     m.save("output/heatmap_pa.html")
 
-def salvar_histograma(histogram):
+def generate_all_histograms(outputPath):
 
-    # Salvar histograma
-    with open("output/histogram.csv", "w") as f:
-        for t, count in enumerate(histogram):
-            f.write(f"{t},{count}\n")
+    df = pd.read_csv(outputPath)
 
-    # Carregar o CSV
-    df = pd.read_csv("output/histogram.csv", names=["minute", "PA_count"])
-
-    # Converter minutos para horário (opcional, mas fica mais legível)
-    df["hour"] = df["minute"] // 60
-    df["minute_of_hour"] = df["minute"] % 60
+    # Converter tempo em formato legível
+    df["hour"] = df["tempo"] // 60
+    df["minute_of_hour"] = df["tempo"] % 60
     df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
 
-    # Plotar
-    plt.figure(figsize=(15, 5))
-    plt.plot(df["time"], df["PA_count"], linewidth=1.2, color="darkblue")
-    plt.title("Quantidade de Pontos de Articulação (PA) ao longo do dia")
-    plt.xlabel("Horário")
-    plt.ylabel("Quantidade de PAs")
-    plt.xticks(df["time"][::60], rotation=45)  # mostra só 1 ponto por hora
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig("output/histograma_pontos_articulacao.png")
-    # plt.show()
+    metricas = [
+        "quantidadePAs", "betweenness", "degree", "closeness", "eigenvector",
+        "lifespan", "mobility", "fragmentationImpact", "kConnectivity"
+    ]
+
+    os.makedirs("output/histogramas", exist_ok=True)
+
+    for metrica in metricas:
+        plt.figure(figsize=(15, 5))
+        plt.plot(df["time"], df[metrica], linewidth=1.2)
+        plt.title(f"{metrica} ao longo do tempo")
+        plt.xlabel("Horário")
+        plt.ylabel(metrica)
+        plt.xticks(df["time"][::60], rotation=45)
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"output/histogramas/{metrica}.png")
+        plt.close()
+
+# def generate_histogram(outputPath):
+#
+#     # Carregar apenas as duas primeiras colunas, ignorando o cabeçalho
+#     df = pd.read_csv(outputPath, usecols=[0, 1], skiprows=1, names=["minute", "PA_count"])
+#
+#     # Garantir que 'minute' é inteiro
+#     df["minute"] = df["minute"].astype(int)
+#
+#     # Converter minutos para horário
+#     df["hour"] = df["minute"] // 60
+#     df["minute_of_hour"] = df["minute"] % 60
+#     df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
+#
+#     # Plotar
+#     plt.figure(figsize=(15, 5))
+#     plt.plot(df["time"], df["PA_count"], linewidth=1.2, color="darkblue")
+#     plt.title("Quantidade de Pontos de Articulação (PA) ao longo do dia")
+#     plt.xlabel("Horário")
+#     plt.ylabel("Quantidade de PAs")
+#     plt.xticks(df["time"][::60], rotation=45)  # mostra só 1 ponto por hora
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.savefig("output/histograma_pontos_articulacao.png")
+#
 
 # NOTE: Jeito alternativo de salvar o Histograma
 
