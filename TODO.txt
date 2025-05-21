@@ -1,0 +1,11 @@
+Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
+
+Ajeitar os horários do histograma
+
+Incluir no histograma para cada horário informações sobre a rede
+
+Entender pq o mapa da contorno deu errado
+
+Entender pq estava tendo uns engarrafamentos estranhos no viaduto
+
+fazer o código e gerar heatmap e histograma com traces reais
