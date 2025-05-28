@@ -1,17 +1,37 @@
 import traci
 import networkx as nx
-import matplotlib.pyplot as plt
+import os
 
 from analysis.articulation import find_articulation_points
 from analysis.visualization import generate_heat_map
 from analysis.visualization import generate_all_histograms 
 
-DEBUGGING = False
+DEBUGGING = True
 SUMO_BINARY = "sumo-gui"  # ou "sumo-gui" se quiser ver
-NET_FILE = "net/santa_tereza.net.xml"
-ROUTE_FILE = "routes/santa_tereza.rou.xml"
+# TRACE_NAME = "santa_tereza"
+TRACE_NAME = "sao_paulo"
+NET_FILE = f"net/{TRACE_NAME}.net.xml"
+ROUTE_FILE = f"routes/{TRACE_NAME}.rou.xml"
+SIMULATION_MAX_TIME = 3600
 
 DISTANCE_THRESHOLD = 100  # metros
+
+def getNextSimID():
+
+    path = "output/lastSimulationID.txt"
+
+    # Read the current ID
+    with open(path, "r") as f:
+        lastSimID = int(f.read())
+
+    # Increment the ID
+    lastSimID += 1
+
+    # Overwrite with the new ID
+    with open(path, "w") as f:
+        f.write(str(lastSimID))
+
+    return lastSimID
 
 def get_vehicle_positions():
 
@@ -45,21 +65,6 @@ def build_graph(positions):
 
     return G
 
-def save_csv(csv):
-
-    outputPath = "output/histogram.csv"
-
-    # Salvar histograma
-    with open("output/histogram.csv", "w") as f:
-
-        f.write("tempo,quantidadePAs,betweenness,degree,closeness,eigenvector,lifespan,mobility,fragmentationImpact,kConnectivity\n")
-
-        for tempo, (qtdPAs, metricas) in enumerate(csv):
-            valores = [f"{tempo}", f"{qtdPAs}"] + [f"{value:.4f}" for value in metricas]
-            f.write(",".join(valores) + "\n")
-
-    return outputPath
-
 PA_LIFESPAN = {}
 LAST_POSITIONS = {}
 
@@ -75,6 +80,8 @@ def calcular_metricas(aps, G, positions):
         Mobilidade relativa,
         Impacto na fragmentação,
         K-connectivity local,
+        Graph Density,
+        Number of cars,
     """
 
     n = len(aps)
@@ -93,7 +100,9 @@ def calcular_metricas(aps, G, positions):
         "lifespan": 0.0,
         "mobility": 0.0,
         "fragmentation_impact": 0.0,
-        "k_connectivity": 0.0
+        "k_connectivity": 0.0,
+        "density": 0.0,
+        "number_of_cars": 0.0,
     }
 
     # Métricas globais do grafo
@@ -112,6 +121,8 @@ def calcular_metricas(aps, G, positions):
         metricas["closeness"] += closeness.get(ap, 0)
         metricas["eigenvector"] += eigenvector.get(ap, 0)
         metricas["lifespan"] += PA_LIFESPAN.get(ap, 1)
+        metricas["density"] = nx.density(G) * 100
+        metricas["number_of_cars"] = G.number_of_nodes() 
 
         # Mobilidade relativa
         if ap in LAST_POSITIONS:
@@ -141,12 +152,12 @@ def main():
 
     traci.start([SUMO_BINARY, "-n", NET_FILE, "-r", ROUTE_FILE])
     step = 0
-    csv = []
+    csvData = []
     geoPosAPs = []
 
     sum = 0
 
-    while traci.simulation.getMinExpectedNumber() > 0 and step < 3600:
+    while traci.simulation.getMinExpectedNumber() > 0 and step < SIMULATION_MAX_TIME:
 
         traci.simulationStep()
         positions = get_vehicle_positions()
@@ -156,7 +167,8 @@ def main():
         sum += G.number_of_nodes()
 
         aps = find_articulation_points(G)
-        metricas = calcular_metricas(aps, G, positions)
+        # metricas = calcular_metricas(aps, G, positions)
+        metricas = {}
 
         if DEBUGGING:
             print(f"Number of edges: {G.number_of_edges()}")
@@ -166,7 +178,7 @@ def main():
             print("-----------------------------")
 
         # Salvar estatísticas
-        csv.append((len(aps), metricas))
+        csvData.append((len(aps), metricas))
 
         for vehicle in aps:
             x, y = positions[vehicle]
@@ -184,10 +196,12 @@ def main():
 
     traci.close()
 
-    outputPath = save_csv(csv)
-    # outputPath = "output/histogram.csv"
-    generate_all_histograms(outputPath)
-    generate_heat_map(geoPosAPs)
+    outputPath = f"output/simulation_{getNextSimID()}_{TRACE_NAME}_{step}s_{DISTANCE_THRESHOLD}m/"
+
+    os.makedirs(outputPath, exist_ok=True)
+
+    generate_all_histograms(csvData, outputPath)
+    generate_heat_map(geoPosAPs, outputPath)
 
 if __name__ == "__main__":
     main()
