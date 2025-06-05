@@ -2,4 +2,3 @@ networkx
 matplotlib
 pandas
 folium
-sumo

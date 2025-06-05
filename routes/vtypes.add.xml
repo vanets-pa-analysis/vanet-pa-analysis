@@ -1,0 +1,6 @@
+<!-- vtypes.add.xml -->
+<vTypeDistribution id="vehicles">
+    <vType id="car" accel="2.6" decel="4.5" sigma="0.5" length="5.0" maxSpeed="50"/>
+    <vType id="bus" accel="1.2" decel="2.0" sigma="0.5" length="12.0" maxSpeed="30"/>
+    <vType id="taxi" accel="2.5" decel="4.0" sigma="0.3" length="5.0" maxSpeed="60"/>
+</vTypeDistribution>
