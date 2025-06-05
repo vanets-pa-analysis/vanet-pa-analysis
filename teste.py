@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from quad_tree import Rectangle
 from quad_tree import QuadTreeNode
 
@@ -27,3 +28,13 @@ def main():
 if __name__ == "__main__":
     main()
 
+=======
+metricas = {
+    "metrica1": 1,
+    "metrica2": 2,
+    "metrica3": 3,
+}
+
+for metrica in metricas:
+    print(f"{metrica}: {metricas[metrica]}")
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf

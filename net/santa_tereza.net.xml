@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<<<<<<< HEAD
 <!-- generated on 2025-05-08 00:56:06 by Eclipse SUMO netconvert Version 1.18.0
+=======
+<!-- generated on 2025-05-28 18:34:54 by Eclipse SUMO netconvert Version 1.18.0
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
 
     <input>

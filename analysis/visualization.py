@@ -1,10 +1,16 @@
+<<<<<<< HEAD
 i                # teste = teste U child.search(rect)mport folium
 import pandas as pd
+=======
+import folium
+import pandas as pd
+import os
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf
 import matplotlib.pyplot as plt
 
 from folium.plugins import HeatMap
 
-def generate_heat_map(geoPosAPs):
+def generate_heat_map(geoPosAPs, outputPath):
 
     """
     Gera um mapa de calor com base na lista de coordenadas (latitude, longitude)
@@ -21,10 +27,13 @@ def generate_heat_map(geoPosAPs):
     HeatMap(geoPosAPs, radius=10, blur=15, max_zoom=1).add_to(m)
 
     # Salvar o HTML interativo
-    m.save("output/heatmap_pa.html")
+    m.save(outputPath + "heatmap_pa.html")
 
-def salvar_histograma(histogram):
+def save_csv(outputPath, csvData):
 
+    outputPath += "histogram.csv"
+
+<<<<<<< HEAD
     # Salvar histograma em CSV
     with open("output/histogram.csv", "w") as f:
         for t, (numAPs, numVertices, density) in enumerate(histogram):
@@ -78,6 +87,42 @@ def salvar_histograma(histogram):
     fig.tight_layout()
     plt.savefig("output/histograma_pontos_articulacao.png")
 =======
+=======
+    # Salvar histograma
+    with open(outputPath, "w") as f:
+
+        f.write("tempo,quantidadePAs,betweenness,degree,closeness,eigenvector,lifespan,mobility,fragmentationImpact,kConnectivity,density,number_of_cars\n")
+
+        for tempo, (qtdPAs, metricas) in enumerate(csvData):
+            valores = [f"{tempo}", f"{qtdPAs}"] + [f"{value:.4f}" for value in metricas]
+            f.write(",".join(valores) + "\n")
+
+    return outputPath
+
+def generate_all_histograms(csvData, outputPath):
+
+    csvFile = save_csv(outputPath, csvData)
+
+    df = pd.read_csv(csvFile)
+
+    # Converter tempo em formato legível
+    df["hour"] = df["tempo"] // 60
+    df["minute_of_hour"] = df["tempo"] % 60
+    df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
+
+    # NOTE: metricas["metrica"][0] -> Unidade de Medida
+    # NOTE: metricas["metrica"][1] -> Nome para o título do gráfico
+
+    """
+        Betweenness, Closeness e Eigenvector Centrality geralmente são valores normalizados entre 0 e 1 (ou em média por nó), então indiquei como média normalizada.
+
+        Degree: média dos graus dos nós — "Média de Grau".
+
+        Lifespan: suponho que seja o tempo de permanência de um nó (ex: veículo) no grafo — "Tempo (s)".
+
+        Mobility: dado que vem de simulações SUMO, é comum representar mobilidade como porcentagem de movimento/alcance — "Porcentagem (%)".
+
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf
         Fragmentation Impact: medida adimensional usada para avaliar o impacto da fragmentação — "Valor Normalizado".
 
         K-Connectivity: nível de conectividade k do grafo, é um número inteiro.
@@ -88,12 +133,21 @@ def salvar_histograma(histogram):
     metricas = {
         "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
         "density": ["Density (%)", "Graph Density"],
+<<<<<<< HEAD
         "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
         "degree": ["Mean Degree", "Average AP Node Degree"],
         "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
         "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
         "lifespan": ["Time (s)", "Average AP Lifespan"],
         "mobility": ["Percentage (%)", "Average AP Mobility"],
+=======
+        "betweenness": ["Normalized Mean", "Average Node Betweenness Centrality"],
+        "degree": ["Mean Degree", "Average Node Degree"],
+        "closeness": ["Normalized Mean", "Average Node Closeness Centrality"],
+        "eigenvector": ["Normalized Mean", "Average Eigenvector Centrality"],
+        "lifespan": ["Time (s)", "Average Node Lifespan"],
+        "mobility": ["Percentage (%)", "Average Node Mobility"],
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf
         "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
         "kConnectivity": ["Integer (k)", "K-Connectivity"],
         "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
@@ -138,7 +192,10 @@ def salvar_histograma(histogram):
 #     plt.tight_layout()
 #     plt.savefig("output/histograma_pontos_articulacao.png")
 #
+<<<<<<< HEAD
 >>>>>>> Stashed changes
+=======
+>>>>>>> 6ba8b2eec27248a7e0c2ce25c95e1594d0d947bf
 
 # NOTE: Jeito alternativo de salvar o Histograma
 
