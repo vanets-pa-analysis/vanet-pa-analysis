@@ -1,4 +1,4 @@
-import folium
+i                # teste = teste U child.search(rect)mport folium
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -71,11 +71,74 @@ def salvar_histograma(histogram):
     ax3.set_ylabel("Número de Carros", color=color3)
     ax3.tick_params(axis='y', labelcolor=color3)
 
+<<<<<<< Updated upstream
     # Título e grid
     fig.suptitle("Histograma de Pontos de Articulação, Densidade e Número de Carros ao longo do dia")
     ax1.grid(True)
     fig.tight_layout()
     plt.savefig("output/histograma_pontos_articulacao.png")
+=======
+        Fragmentation Impact: medida adimensional usada para avaliar o impacto da fragmentação — "Valor Normalizado".
+
+        K-Connectivity: nível de conectividade k do grafo, é um número inteiro.
+
+        Number of Cars: contador direto — "Quantidade".
+    """
+
+    metricas = {
+        "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
+        "density": ["Density (%)", "Graph Density"],
+        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
+        "degree": ["Mean Degree", "Average AP Node Degree"],
+        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
+        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
+        "lifespan": ["Time (s)", "Average AP Lifespan"],
+        "mobility": ["Percentage (%)", "Average AP Mobility"],
+        "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
+        "kConnectivity": ["Integer (k)", "K-Connectivity"],
+        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
+    }
+
+    outputPath += "histograms"
+    os.makedirs(outputPath, exist_ok=True)
+
+    for metrica in metricas:
+        plt.figure(figsize=(15, 5))
+        plt.plot(df["time"], df[metrica], linewidth=1.2)
+        plt.title(f"{metricas[metrica][1]} over time")
+        plt.xlabel("Horário")
+        plt.ylabel(metricas[metrica][0])
+        plt.xticks(df["time"][::60], rotation=45)
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{outputPath}/{metrica}.png")
+        plt.close()
+
+# def generate_histogram(outputPath):
+#
+#     # Carregar apenas as duas primeiras colunas, ignorando o cabeçalho
+#     df = pd.read_csv(outputPath, usecols=[0, 1], skiprows=1, names=["minute", "PA_count"])
+#
+#     # Garantir que 'minute' é inteiro
+#     df["minute"] = df["minute"].astype(int)
+#
+#     # Converter minutos para horário
+#     df["hour"] = df["minute"] // 60
+#     df["minute_of_hour"] = df["minute"] % 60
+#     df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
+#
+#     # Plotar
+#     plt.figure(figsize=(15, 5))
+#     plt.plot(df["time"], df["PA_count"], linewidth=1.2, color="darkblue")
+#     plt.title("Quantidade de Pontos de Articulação (PA) ao longo do dia")
+#     plt.xlabel("Horário")
+#     plt.ylabel("Quantidade de PAs")
+#     plt.xticks(df["time"][::60], rotation=45)  # mostra só 1 ponto por hora
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.savefig("output/histograma_pontos_articulacao.png")
+#
+>>>>>>> Stashed changes
 
 # NOTE: Jeito alternativo de salvar o Histograma
 
