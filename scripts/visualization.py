@@ -1,0 +1,164 @@
+import os
+import folium
+import networkx as nx
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from folium.plugins import HeatMap
+
+def draw_graph_with_real_positions(G, positions, radius, save_path = None, show = True, draw_radius = False):
+
+    """
+    Desenha o grafo com os nós posicionados em suas coordenadas reais (x, y),
+    com a opção de desenhar um raio ao redor de cada nó.
+
+    Parâmetros:
+        G (networkx.Graph): O grafo com os veículos como nós.
+        positions (dict): Dicionário {vehicle_id: (x, y)} com posições dos veículos.
+        save_path (str): Caminho para salvar a imagem (opcional).
+        show (bool): Se True, exibe a imagem. Se False, apenas salva (se save_path for definido).
+        draw_radius (bool): Se True, desenha círculos de raio `radius` ao redor de cada nó.
+        radius (float): O raio em metros para os círculos.
+    """
+    plt.figure(figsize=(10, 10))
+
+    # Desenha o grafo com posições reais
+    nx.draw(
+        G,
+        pos=positions,
+        node_size=30,
+        node_color='blue',
+        edge_color='gray',
+        with_labels=True
+    )
+
+    # Desenha círculos de raio ao redor dos nós
+    if draw_radius:
+        ax = plt.gca()
+        for x, y in positions.values():
+            circle = plt.Circle((x, y), radius, color='red', fill=False, linestyle='--', linewidth=0.5)
+            ax.add_patch(circle)
+
+    plt.xlabel("X (metros)")
+    plt.ylabel("Y (metros)")
+    plt.title("Vehicle Graph with Real Positions")
+    plt.axis("equal")
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+def generate_heat_map(geoPosAPs, outputPath):
+
+    """
+        Gera um mapa de calor com base na lista de coordenadas (latitude, longitude)
+        dos pontos de articulação.
+    """
+
+    # Coordenadas centrais aproximadas de Belo Horizonte
+    bh_center = [-19.919, -43.935]
+
+    # Criar o mapa
+    m = folium.Map(location=bh_center, zoom_start=14)
+
+    # Adicionar o heatmap diretamente da lista
+    HeatMap(geoPosAPs, radius=10, blur=15, max_zoom=1).add_to(m)
+
+    # Salvar o HTML interativo
+    m.save(outputPath + "heatmap_pa.html")
+
+def save_csv(outputPath, csvData):
+
+    outputPath += "histogram.csv"
+
+    # Salvar histograma
+    with open(outputPath, "w") as f:
+
+        f.write("tempo,quantidadePAs,betweenness,degree,closeness,eigenvector,lifespan,mobility,fragmentationImpact,k_connectivity,density,number_of_cars\n")
+
+        for tempo, (qtdPAs, metricas) in enumerate(csvData):
+            valores = [f"{tempo}", f"{qtdPAs}"] + [f"{value:.4f}" for value in metricas]
+            f.write(",".join(valores) + "\n")
+
+    return outputPath
+
+def generate_histograms(csvData, outputPath):
+
+    csvFile = save_csv(outputPath, csvData)
+
+    df = pd.read_csv(csvFile)
+
+    # Converter tempo em formato legível
+    df["hour"] = df["tempo"] // 60
+    df["minute_of_hour"] = df["tempo"] % 60
+    df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
+
+    # NOTE: metricas["metrica"][0] -> Unidade de Medida
+    # NOTE: metricas["metrica"][1] -> Nome para o título do gráfico
+
+    """
+        Betweenness, Closeness e Eigenvector Centrality geralmente são valores normalizados entre 0 e 1 (ou em média por nó), então indiquei como média normalizada.
+
+        Degree: média dos graus dos nós — "Média de Grau".
+
+        Lifespan: suponho que seja o tempo de permanência de um nó (ex: veículo) no grafo — "Tempo (s)".
+
+        Mobility: dado que vem de simulações SUMO, é comum representar mobilidade como porcentagem de movimento/alcance — "Porcentagem (%)".
+
+        Fragmentation Impact: medida adimensional usada para avaliar o impacto da fragmentação — "Valor Normalizado".
+
+        K-Connectivity: nível de conectividade k do grafo, é um número inteiro.
+
+        Number of Cars: contador direto — "Quantidade".
+    """
+
+    metricas = {
+        "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
+        "density": ["Density (%)", "Graph Density"],
+        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
+        "degree": ["Mean Degree", "Average AP Node Degree"],
+        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
+        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
+        "lifespan": ["Time (s)", "Average AP Lifespan"],
+        "mobility": ["Percentage (%)", "Average AP Mobility"],
+        "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
+        "k_connectivity": ["Integer (k)", "K-Connectivity"],
+        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
+    }
+
+    outputPath += "histograms"
+    os.makedirs(outputPath, exist_ok=True)
+
+    for metrica in metricas:
+        plt.figure(figsize=(15, 5))
+        plt.plot(df["time"], df[metrica], linewidth=1.2)
+        plt.title(f"{metricas[metrica][1]} over time")
+        plt.xlabel("Horário")
+        plt.ylabel(metricas[metrica][0])
+        plt.xticks(df["time"][::60], rotation=45)
+        plt.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{outputPath}/{metrica}.png")
+        plt.close()
+
+# NOTE: Jeito alternativo de salvar o Histograma
+
+# def salvar_histograma(histogram):
+#
+#     # Salvar histograma
+#     with open("output/histogram.csv", "w") as f:
+#         for t, count in enumerate(histogram):
+#             f.write(f"{t},{count}\n")
+#
+#     data = pd.read_csv("output/histogram.csv", header=None, names=["t", "count"])
+#     plt.plot(data["t"], data["count"])
+#     plt.title("Número de Pontos de Articulação ao Longo do Tempo")
+#     plt.xlabel("Tempo (s)")
+#     plt.ylabel("Qtd de PAs")
+#     plt.grid(True)
+#     # plt.show()
+#     plt.savefig("output/histograma_pontos_articulacao.png")

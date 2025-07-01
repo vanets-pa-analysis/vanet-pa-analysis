@@ -1,11 +1,29 @@
-Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
+TODO:
+	- Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
+	- Ajeitar os horários do histograma DONE
+	- Incluir no histograma para cada horário informações sobre a rede DONE
+	- Entender pq o mapa da contorno deu errado
+	- Entender pq estava tendo uns engarrafamentos estranhos no viaduto
+	- fazer o código e gerar heatmap e histograma com traces reais
 
-Ajeitar os horários do histograma DONE
+-----------------------------------------------------------------------------------
 
-Incluir no histograma para cada horário informações sobre a rede DONE
+Comentários:
+bing maps (microsoft) nos permite ter noção de densidade por horario do dia?
+Como fazer a simulação do sumo ser mais realista.
+Pq 100m para uma aresta, 86:11p?
+Como o networkx calcula PA?
+Calcular toda a complexidade do processo de gerar os dados.
+Trabalhar com mutiplas cidades.
+maps.here.com (tom tom)
+Fazer uma caracterização:
+	- Quais a carac do PA:
+		- Onde aparece
+		- Quando aparece
 
-Entender pq o mapa da contorno deu errado
+	Aplicações: Pra que me serve saber mais sobre PAs?
 
-Entender pq estava tendo uns engarrafamentos estranhos no viaduto
+Estudar em como deixar a simulação mais realistica:
+	- Será que é possível inserir onibus e taxis?
 
-fazer o código e gerar heatmap e histograma com traces reais
+Usar os cenários prontos do SUMO e testar com redes em com densidades diferentes.

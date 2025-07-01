@@ -1,0 +1,24 @@
+<configuration>
+    <input>
+        <net-file value="../net/Luxembourg.net.xml"/>
+        <route-files value="../routes/Luxembourg.rou.xml"/>
+    </input>
+    <output>
+        <no-step-log value="True"/>
+        <summary-output value="summary.xml"/>
+        <tripinfo-output value="tripinfo.xml"/>
+    </output>
+    <random_number><random value="False"/></random_number>
+    <time><begin value="0"/> <end value="39600"/> </time>
+    <processing>
+        <route-steps value="200"/>
+        <no-internal-links value="False"/>
+        <lanechange.allow-swap value="False"/>
+        <sloppy-insert value="False"/>
+        <time-to-teleport value="300"/>
+    </processing>
+    <report>
+        <verbose value="True"/>
+        <no-warnings value="False"/>
+    </report>
+</configuration>
