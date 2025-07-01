@@ -1,0 +1,80 @@
+<!-- <?xml version="1.0" encoding="UTF-8"?> -->
+<configuration>
+
+    <!-- INPUT FILES -->
+    <input>
+        <!-- The network file describing roads and intersections -->
+		<net-file value = "santa_tereza.net.xml"/>
+
+        <!-- The route file describing vehicle flows, trips, and definitions -->
+		<route-files value = "santa_tereza.rou.xml"/>
+    </input>
+
+    <!-- OUTPUT SETTINGS -->
+    <output>
+        <!-- Avoid writing step-by-step simulation logs (saves space and speed) -->
+        <no-step-log value="True"/>
+
+        <!-- File where a summary of the simulation is written (aggregated stats) -->
+        <summary-output value="summary.xml"/>
+
+        <!-- File where detailed trip information for each vehicle is written -->
+        <tripinfo-output value="tripinfo.xml"/>
+    </output>
+
+	<gui_only>
+		<!-- Starts the simulation automatically -->
+		<start value="true"/>
+
+		<!-- Closes the GUI automatically when the simulation ends -->
+		<quit-on-end value="true"/>
+	</gui_only>
+
+    <!-- RANDOM NUMBER GENERATION -->
+    <random_number>
+        <!-- Disable random seed initialization (simulation will be deterministic) -->
+        <random value="False"/>
+		<!-- <seed value="42"/> -->
+    </random_number>
+
+    <!-- SIMULATION TIME SETTINGS -->
+    <time>
+        <!-- Simulation start time (use -1 to auto-detect from first vehicle) -->
+        <begin value="0"/>
+
+        <!-- Simulation end time in seconds (86400 = 24 hours) -->
+        <end value="3600"/>
+
+		<step-length value="1.0"/> <!-- default is 1s; for more precision use 0.1 -->
+    </time>
+
+    <!-- PROCESSING OPTIONS -->
+    <processing>
+        <!-- How often (in steps) to recalculate routes for rerouting vehicles -->
+        <route-steps value="200"/>
+
+        <!-- Whether internal links (used in junctions) are excluded from output -->
+        <!-- <no-internal-links value="False"/> -->
+
+        <!-- Prevents vehicles from swapping lanes when changing lanes -->
+        <!-- <lanechange.allow-swap value="False"/> -->
+
+        <!-- Prevents insertion of vehicles into simulation in unsafe conditions -->
+        <!-- <sloppy-insert value="False"/> -->
+
+        <!-- Time (in seconds) after which stuck vehicles are teleported away -->
+        <time-to-teleport value="300"/>
+
+		<!-- This prevents crashes if your route file references unavailable routes (useful during development or batch processing). -->
+		<ignore-route-errors value="true"/>
+    </processing>
+
+    <!-- VERBOSITY AND WARNINGS -->
+    <report>
+        <!-- Enable detailed logging of the simulation process -->
+        <verbose value="True"/>
+
+        <!-- Allow warnings to be shown -->
+        <no-warnings value="False"/>
+    </report>
+</configuration>
