@@ -18,6 +18,7 @@ TRACE_NAME              = "santa_tereza"
 SUMOCFG_FILE            = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS                  = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME                = utils.get_end_time(SUMOCFG_FILE)
+SUMO_CONFIG             = "sumo-gui"
 
 METRICS_EVERY_N_SECONDS = 60
 DISTANCE_THRESHOLD      = 100
@@ -26,14 +27,14 @@ SAVE_RESULTS            = False
 
 def main():
 
-    traci.start(["sumo-gui", "-c", SUMOCFG_FILE])
+    traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE])
 
     step, csv_data, geoPosAPs = 0, [], []
 
-    while sim.getTime() <= END_TIME and sim.getMinExpectedNumber() > 0:
+    while step <= END_TIME and sim.getMinExpectedNumber() > 0:
 
         traci.simulationStep()
-        step += 1
+        step = sim.getTime()
 
         if step % METRICS_EVERY_N_SECONDS != 0: continue
 

@@ -30,7 +30,7 @@ def getNextSimID():
 
     return lastSimID
 
-def get_end_time(sumocfg_path):
+def get_end_time(sumocfg_path) -> int:
 
     tree = ET.parse(sumocfg_path)
     root = tree.getroot()
@@ -40,9 +40,9 @@ def get_end_time(sumocfg_path):
         end = time_tag.find("end")
 
         if end is not None:
-            return float(end.attrib["value"])
+            return int(end.attrib["value"])
 
-    return None
+    return 0
 
 def extract_net_path(sumocfg_path: str) -> str:
     """
