@@ -59,14 +59,47 @@ def generate_heat_map(geoPosAPs, outputPath):
         dos pontos de articulação.
     """
 
-    # Coordenadas centrais aproximadas de Belo Horizonte
-    bh_center = [-19.919, -43.935]
+    flattened_coordinates = [coordinate for coordinate_list in geoPosAPs for coordinate in coordinate_list]
+
+    # Calcular centro dinâmico baseado nas coordenadas dos pontos
+    if flattened_coordinates:
+        latitudes = [coord[0] for coord in flattened_coordinates]
+        longitudes = [coord[1] for coord in flattened_coordinates]
+        
+        # Centro baseado na média das coordenadas
+        center_lat = sum(latitudes) / len(latitudes)
+        center_lon = sum(longitudes) / len(longitudes)
+        dynamic_center = [center_lat, center_lon]
+        
+        # Calcular zoom apropriado baseado na dispersão dos pontos
+        lat_range = max(latitudes) - min(latitudes)
+        lon_range = max(longitudes) - min(longitudes)
+        max_range = max(lat_range, lon_range)
+        
+        # Ajustar zoom baseado na dispersão (quanto maior a dispersão, menor o zoom)
+        if max_range > 1.0:
+            zoom_level = 10
+        elif max_range > 0.5:
+            zoom_level = 11
+        elif max_range > 0.1:
+            zoom_level = 12
+        elif max_range > 0.05:
+            zoom_level = 13
+        else:
+            zoom_level = 14
+    else:
+        # Fallback para Belo Horizonte se não houver coordenadas
+        dynamic_center = [-19.919, -43.935]
+        zoom_level = 14
 
     # Criar o mapa
-    m = folium.Map(location=bh_center, zoom_start=14)
+    m = folium.Map(location=dynamic_center, zoom_start=zoom_level)
 
-    # Adicionar o heatmap diretamente da lista
-    HeatMap(geoPosAPs, radius=10, blur=15, max_zoom=1).add_to(m)
+    
+
+    # Adicionar o heatmap usando as coordenadas achatadas
+    if flattened_coordinates:
+        HeatMap(flattened_coordinates, radius=10, blur=15, max_zoom=1).add_to(m)
 
     # Salvar o HTML interativo
     m.save(outputPath + "heatmap_pa.html")
@@ -80,8 +113,8 @@ def save_csv(outputPath, csvData):
 
         f.write("tempo,quantidadePAs,betweenness,degree,closeness,eigenvector,lifespan,mobility,fragmentationImpact,k_connectivity,density,number_of_cars\n")
 
-        for tempo, (qtdPAs, metricas) in enumerate(csvData):
-            valores = [f"{tempo}", f"{qtdPAs}"] + [f"{value:.4f}" for value in metricas]
+        for tempo, metricas in enumerate(csvData): 
+            valores = [f"{tempo}"] + [f"{value:.4f}" for value in metricas if type(value) != list]
             f.write(",".join(valores) + "\n")
 
     return outputPath

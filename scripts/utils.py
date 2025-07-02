@@ -76,7 +76,7 @@ def extract_net_path(sumocfg_path: str) -> str:
 def get_simulation_bounds(SUMOCFG_FILE):
 
     slash_index = SUMOCFG_FILE.rfind('/') + 1 # finds '/' from right to left
-    sumocfg_dir = SUMOCFG_FILE[:-slash_index] # return a substring from 0 to len -slash_index
+    sumocfg_dir = SUMOCFG_FILE[:slash_index] # return a substring from 0 to slash_index
     net_file_path = sumocfg_dir + extract_net_path(SUMOCFG_FILE)
 
     # Extrai os limites espaciais da simulação (bounding box) do arquivo .net.xml.

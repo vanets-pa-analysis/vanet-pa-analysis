@@ -11,10 +11,10 @@ from scripts.metrics import calcular_metricas
 TRACES_PATH = {
     "santa_tereza": "santa_tereza/santa_tereza",
     "sao_paulo"   : "sao_paulo/sao_paulo",
-    "luxemburg"   : "LUSTSCenario/Scenario/due.actuated",
+    "luxemburg"   : "LuSTScenario/scenario/due.actuated",
 }
 
-TRACE_NAME              = "santa_tereza"
+TRACE_NAME              = "luxemburg"
 SUMOCFG_FILE            = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS                  = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME                = utils.get_end_time(SUMOCFG_FILE)
@@ -23,7 +23,7 @@ SUMO_CONFIG             = "sumo-gui"
 METRICS_EVERY_N_SECONDS = 60
 DISTANCE_THRESHOLD      = 100
 DEBUGGING               = False
-SAVE_RESULTS            = False
+SAVE_RESULTS            = True
 
 def main():
 
@@ -56,7 +56,7 @@ def main():
 
         # FIX: geoPosAPs era pra ser uma lista de coordenadas, agora é uma lista de listas de coordenadas
         # csv_data era -> csvData.append((len(aps), metricas))
-        # vis.generate_histograms(csv_data, outputPath)
-        # vis.generate_heat_map(geoPosAPs, outputPath)
+        vis.generate_histograms(csv_data, outputPath)
+        vis.generate_heat_map(geoPosAPs, outputPath)
 
 if __name__ == "__main__": main()

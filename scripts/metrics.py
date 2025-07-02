@@ -146,6 +146,8 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
     n = len(articulation_points)
 
     metrics = {
+        "len_articulation_points": n,
+        "articulation_points": articulation_points,
         "betweenness": 0.0,
         "degree": 0.0,
         "closeness": 0.0,
@@ -155,8 +157,7 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
         "fragmentation_impact": 0.0,
         "k_connectivity": 0.0,
         "density": nx.density(G) * 100,
-        "number_of_cars": G.number_of_nodes(),
-        "articulation_points": articulation_points
+        "number_of_cars": G.number_of_nodes()
     }
 
     if n == 0: return (metrics, [])
