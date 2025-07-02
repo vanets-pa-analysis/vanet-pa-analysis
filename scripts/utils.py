@@ -2,6 +2,7 @@ import traci
 import networkx as nx
 import xml.etree.ElementTree as ET
 import matplotlib.pyplot as plt
+from math import inf
 
 def get_vehicle_positions():
 
@@ -30,7 +31,7 @@ def getNextSimID():
 
     return lastSimID
 
-def get_end_time(sumocfg_path) -> int:
+def get_end_time(sumocfg_path) -> float:
 
     tree = ET.parse(sumocfg_path)
     root = tree.getroot()
@@ -40,9 +41,9 @@ def get_end_time(sumocfg_path) -> int:
         end = time_tag.find("end")
 
         if end is not None:
-            return int(end.attrib["value"])
+            return float(end.attrib["value"])
 
-    return 0
+    return inf
 
 def extract_net_path(sumocfg_path: str) -> str:
     """
