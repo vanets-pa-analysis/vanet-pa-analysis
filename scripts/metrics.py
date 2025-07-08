@@ -197,7 +197,7 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
             x0, y0 = LAST_POSITIONS[ap]
             x1, y1 = positions[ap]
             dx, dy = x1 - x0, y1 - y0
-            metrics["mobility"] += (dx**2 + dy**2)**0.5
+            metrics["mobility"] += (dx ** 2 + dy ** 2) ** 0.5
 
         LAST_POSITIONS[ap] = positions[ap]
 

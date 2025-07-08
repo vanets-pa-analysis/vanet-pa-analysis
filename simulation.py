@@ -12,9 +12,10 @@ TRACES_PATH = {
     "santa_tereza": "santa_tereza/santa_tereza",
     "sao_paulo"   : "sao_paulo/sao_paulo",
     "luxemburg"   : "LuSTScenario/scenario/due.actuated",
+    "monaco"      : "MoSTScenario/scenario/most",
 }
 
-TRACE_NAME              = "luxemburg"
+TRACE_NAME              = "monaco"
 SUMOCFG_FILE            = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS                  = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME                = utils.get_end_time(SUMOCFG_FILE)
@@ -23,7 +24,8 @@ SUMO_CONFIG             = "sumo-gui"
 METRICS_EVERY_N_SECONDS = 60
 DISTANCE_THRESHOLD      = 100
 DEBUGGING               = False
-SAVE_RESULTS            = True
+SAVE_RESULTS            = False
+GET_METRICS             = True
 
 def main():
 
@@ -38,15 +40,16 @@ def main():
 
         if step % METRICS_EVERY_N_SECONDS != 0: continue
 
-        positions = utils.get_vehicle_positions()
-        G = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
+        if GET_METRICS:
+            positions = utils.get_vehicle_positions()
+            G = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
 
-        # Salvar estatísticas
-        metrics, coordenates = calcular_metricas(G, positions, multithreaded = False)
-        geoPosAPs.append(coordenates)
-        csv_data.append([metrics[m] for m in metrics])
+            # Salvar estatísticas
+            metrics, coordenates = calcular_metricas(G, positions, multithreaded = False)
+            geoPosAPs.append(coordenates)
+            csv_data.append([metrics[m] for m in metrics])
 
-        if DEBUGGING: utils.debug_stats(G, step, metrics)
+            if DEBUGGING: utils.debug_stats(G, step, metrics)
 
     traci.close()
 
@@ -54,8 +57,6 @@ def main():
         outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{step - 1}s_{DISTANCE_THRESHOLD}m/"
         os.makedirs(outputPath, exist_ok = True)
 
-        # FIX: geoPosAPs era pra ser uma lista de coordenadas, agora é uma lista de listas de coordenadas
-        # csv_data era -> csvData.append((len(aps), metricas))
         vis.generate_histograms(csv_data, outputPath)
         vis.generate_heat_map(geoPosAPs, outputPath)
 
