@@ -15,7 +15,7 @@ TRACES_PATH = {
     "monaco"      : "MoSTScenario/scenario/most",
 }
 
-TRACE_NAME              = "monaco"
+TRACE_NAME              = "santa_tereza"
 SUMOCFG_FILE            = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS                  = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME                = utils.get_end_time(SUMOCFG_FILE)
@@ -24,7 +24,7 @@ SUMO_CONFIG             = "sumo-gui"
 METRICS_EVERY_N_SECONDS = 60
 DISTANCE_THRESHOLD      = 100
 DEBUGGING               = False
-SAVE_RESULTS            = False
+SAVE_RESULTS            = True
 GET_METRICS             = True
 
 def main():
@@ -47,14 +47,14 @@ def main():
             # Salvar estatísticas
             metrics, coordenates = calcular_metricas(G, positions, multithreaded = False)
             geoPosAPs.append(coordenates)
-            csv_data.append([metrics[m] for m in metrics])
+            csv_data.append([m for m in metrics.values() if type(m) != list])
 
             if DEBUGGING: utils.debug_stats(G, step, metrics)
 
     traci.close()
 
     if SAVE_RESULTS:
-        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{step - 1}s_{DISTANCE_THRESHOLD}m/"
+        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{(step - 1):.0f}s_{DISTANCE_THRESHOLD}m/"
         os.makedirs(outputPath, exist_ok = True)
 
         vis.generate_histograms(csv_data, outputPath)

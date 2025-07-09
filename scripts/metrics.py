@@ -147,7 +147,7 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
 
     metrics = {
         "len_articulation_points": n,
-        "articulation_points": articulation_points,
+        "articulation_points_percentage": n / G.number_of_nodes() * 100,
         "betweenness": 0.0,
         "degree": 0.0,
         "closeness": 0.0,
@@ -157,7 +157,8 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
         "fragmentation_impact": 0.0,
         "k_connectivity": 0.0,
         "density": nx.density(G) * 100,
-        "number_of_cars": G.number_of_nodes()
+        "number_of_cars": G.number_of_nodes(),
+        "articulation_points": articulation_points
     }
 
     if n == 0: return (metrics, [])
@@ -213,11 +214,11 @@ def calcular_metricas(G, positions, multithreaded = False) -> tuple[dict, list]:
             G.add_edge(ap, vizinho)
 
         # K-connectivity: grau mínimo entre vizinhos
-        # metricas["k_connectivity"] += min(local_node_connectivity(G, ap, v) for v in G.nodes if v != ap)
+        metrics["k_connectivity"] += min(local_node_connectivity(G, ap, v) for v in G.nodes if v != ap)
 
     # Média das métricas
     for m in metrics:
-        if m != "density" and m != "number_of_cars" and m != "articulation_points":
+        if m != "density" and m != "number_of_cars" and m != "len_articulation_points" and type(metrics[m]) != list:
             metrics[m] /= n
 
     return (metrics, geoPosAPs)

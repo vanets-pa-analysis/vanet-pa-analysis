@@ -65,17 +65,17 @@ def generate_heat_map(geoPosAPs, outputPath):
     if flattened_coordinates:
         latitudes = [coord[0] for coord in flattened_coordinates]
         longitudes = [coord[1] for coord in flattened_coordinates]
-        
+
         # Centro baseado na média das coordenadas
         center_lat = sum(latitudes) / len(latitudes)
         center_lon = sum(longitudes) / len(longitudes)
         dynamic_center = [center_lat, center_lon]
-        
+
         # Calcular zoom apropriado baseado na dispersão dos pontos
         lat_range = max(latitudes) - min(latitudes)
         lon_range = max(longitudes) - min(longitudes)
         max_range = max(lat_range, lon_range)
-        
+
         # Ajustar zoom baseado na dispersão (quanto maior a dispersão, menor o zoom)
         if max_range > 1.0:
             zoom_level = 10
@@ -95,7 +95,7 @@ def generate_heat_map(geoPosAPs, outputPath):
     # Criar o mapa
     m = folium.Map(location=dynamic_center, zoom_start=zoom_level)
 
-    
+
 
     # Adicionar o heatmap usando as coordenadas achatadas
     if flattened_coordinates:
@@ -104,24 +104,44 @@ def generate_heat_map(geoPosAPs, outputPath):
     # Salvar o HTML interativo
     m.save(outputPath + "heatmap_pa.html")
 
-def save_csv(outputPath, csvData):
+def save_csv(outputPath, csvData, metricas_map):
 
     outputPath += "histogram.csv"
 
     # Salvar histograma
     with open(outputPath, "w") as f:
 
-        f.write("tempo,quantidadePAs,betweenness,degree,closeness,eigenvector,lifespan,mobility,fragmentationImpact,k_connectivity,density,number_of_cars\n")
+        csv_header = ["tempo"]
 
-        for tempo, metricas in enumerate(csvData): 
-            valores = [f"{tempo}"] + [f"{value:.4f}" for value in metricas if type(value) != list]
+        for key in metricas_map:
+            csv_header.append(key)
+
+        f.write(",".join(csv_header) + "\n")
+
+        for tempo, metricas in enumerate(csvData):
+            valores = [f"{tempo}"] + [f"{value:.4g}" for value in metricas]
             f.write(",".join(valores) + "\n")
 
     return outputPath
 
 def generate_histograms(csvData, outputPath):
 
-    csvFile = save_csv(outputPath, csvData)
+    metricas_map = {
+        "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
+        "articulation_points_percentage": ["Articulation Points (%)", "Proportion of Articulation Points among Vehicles"],
+        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
+        "degree": ["Mean Degree", "Average AP Node Degree"],
+        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
+        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
+        "lifespan": ["Time (s)", "Average AP Lifespan"],
+        "mobility": ["Percentage (%)", "Average AP Mobility"],
+        "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
+        "k_connectivity": ["Integer (k)", "K-Connectivity"],
+        "density": ["Density (%)", "Graph Density"],
+        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
+    }
+
+    csvFile = save_csv(outputPath, csvData, metricas_map)
 
     df = pd.read_csv(csvFile)
 
@@ -149,29 +169,15 @@ def generate_histograms(csvData, outputPath):
         Number of Cars: contador direto — "Quantidade".
     """
 
-    metricas = {
-        "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
-        "density": ["Density (%)", "Graph Density"],
-        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
-        "degree": ["Mean Degree", "Average AP Node Degree"],
-        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
-        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
-        "lifespan": ["Time (s)", "Average AP Lifespan"],
-        "mobility": ["Percentage (%)", "Average AP Mobility"],
-        "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
-        "k_connectivity": ["Integer (k)", "K-Connectivity"],
-        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
-    }
-
     outputPath += "histograms"
     os.makedirs(outputPath, exist_ok=True)
 
-    for metrica in metricas:
+    for metrica in metricas_map:
         plt.figure(figsize=(15, 5))
         plt.plot(df["time"], df[metrica], linewidth=1.2)
-        plt.title(f"{metricas[metrica][1]} over time")
+        plt.title(f"{metricas_map[metrica][1]} over time")
         plt.xlabel("Horário")
-        plt.ylabel(metricas[metrica][0])
+        plt.ylabel(metricas_map[metrica][0])
         plt.xticks(df["time"][::60], rotation=45)
         plt.grid(True)
         plt.tight_layout()

@@ -2,9 +2,9 @@ TODO:
 	- Ajeitar os horários do histograma
 	- Ser capaz de extrair informações específicas de cada tipo diferente de veículo
 		- Pensar na modelagem disso
-	- Nova metrica: percentual de PAs em relacao ao numero de carros
 	- Rodar simulações com Luxemburgo e Monaco
 	- Ler: Como foi contruído o trace de Luxemburgo https://ieeexplore.ieee.org/document/7906642
+	- Arrumar Kconnectivity
 
 -----------------------------------------------------------------------------------
 
@@ -12,6 +12,7 @@ FEITOS:
 	- Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
 	- Incluir no histograma para cada horário informações sobre a rede
 	- fazer o código e gerar heatmap e histograma com traces reais
+	- Nova metrica: percentual de PAs em relacao ao numero de carros
 
 -----------------------------------------------------------------------------------
 DESISISTMOS:

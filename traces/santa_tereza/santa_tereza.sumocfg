@@ -43,7 +43,7 @@
         <begin value="0"/>
 
         <!-- Simulation end time in seconds (86400 = 24 hours) -->
-        <end value="3600"/>
+        <end value="86400"/>
 
 		<step-length value="1.0"/> <!-- default is 1s; for more precision use 0.1 -->
     </time>
