@@ -1,17 +1,20 @@
 import traci
 from traci import simulation as sim
 
+from tqdm import tqdm
+
 import scripts.utils as utils
 from teste import ConcreteClass1, ConcreteClass2
 
 ###################################################
 
-TRACE_NAME              = "luxembourg"
+TRACE_NAME              = "santa_tereza"
 # TRACE_TYPE              = Extractors.Extractor1
-SUMO_CONFIG             = "sumo-gui"
+SUMO_CONFIG             = "sumo" # ou "sumo-gui"
 METRICS_EVERY_N_SECONDS = 60
 DISTANCE_THRESHOLD      = 100
 DEBUGGING               = False
+SIMULATION_WARNINGS     = False
 SAVE_RESULTS            = True
 CALCULATE_METRICS       = True
 
@@ -27,10 +30,11 @@ TRACES_PATH = {
 SUMOCFG_FILE = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS       = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME     = utils.get_end_time(SUMOCFG_FILE)
+SIM_WARNINGS_FLAG = [] if SIMULATION_WARNINGS else ["--no-warnings", "--no-step-log"]
 
 def main():
 
-    traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE])
+    traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE] + SIM_WARNINGS_FLAG)
 
     # TODO: Change this to the ExtractorFactry
     metrics_extractor = ConcreteClass2(
@@ -42,15 +46,19 @@ def main():
     )
 
     step = 0
+    pbar = tqdm(total=END_TIME, desc="Simulating", unit="step")
 
     while step <= END_TIME and sim.getMinExpectedNumber() > 0:
 
         traci.simulationStep()
+        pbar.update(sim.getTime() - step)
+
         step = sim.getTime()
 
         if CALCULATE_METRICS:
             metrics_extractor.extract_data(step)
 
+    pbar.close()
     traci.close()
 
     if SAVE_RESULTS:
