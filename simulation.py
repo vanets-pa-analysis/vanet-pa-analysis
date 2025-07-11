@@ -1,12 +1,21 @@
-import os
 import traci
 from traci import simulation as sim
 
 import scripts.utils as utils
-import scripts.visualization as vis
+from teste import ConcreteClass1
 
-from scripts.build_graph import build_graph
-from scripts.metrics import calcular_metricas
+###################################################
+
+TRACE_NAME              = "santa_tereza"
+# TRACE_TYPE              = Extractors.Extractor1
+SUMO_CONFIG             = "sumo-gui"
+METRICS_EVERY_N_SECONDS = 60
+DISTANCE_THRESHOLD      = 100
+DEBUGGING               = False
+SAVE_RESULTS            = True
+CALCULATE_METRICS       = True
+
+###################################################
 
 TRACES_PATH = {
     "santa_tereza": "santa_tereza/santa_tereza",
@@ -15,49 +24,34 @@ TRACES_PATH = {
     "monaco"      : "MoSTScenario/scenario/most",
 }
 
-TRACE_NAME              = "santa_tereza"
-SUMOCFG_FILE            = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
-BOUNDS                  = utils.get_simulation_bounds(SUMOCFG_FILE)
-END_TIME                = utils.get_end_time(SUMOCFG_FILE)
-SUMO_CONFIG             = "sumo-gui"
-
-METRICS_EVERY_N_SECONDS = 60
-DISTANCE_THRESHOLD      = 100
-DEBUGGING               = False
-SAVE_RESULTS            = True
-GET_METRICS             = True
+SUMOCFG_FILE = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
+BOUNDS       = utils.get_simulation_bounds(SUMOCFG_FILE)
+END_TIME     = utils.get_end_time(SUMOCFG_FILE)
 
 def main():
 
     traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE])
 
-    step, csv_data, geoPosAPs = 0, [], []
+    metrics_extractor = ConcreteClass1(
+        distance_threshold = DISTANCE_THRESHOLD,
+        metrics_every_n_seconds = METRICS_EVERY_N_SECONDS,
+        use_quad_tree = (True, BOUNDS)
+        # multithreaded = False
+    )
+
+    step = 0
 
     while step <= END_TIME and sim.getMinExpectedNumber() > 0:
 
         traci.simulationStep()
         step = sim.getTime()
 
-        if step % METRICS_EVERY_N_SECONDS != 0: continue
-
-        if GET_METRICS:
-            positions = utils.get_vehicle_positions()
-            G = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
-
-            # Salvar estatísticas
-            metrics, coordenates = calcular_metricas(G, positions, multithreaded = False)
-            geoPosAPs.append(coordenates)
-            csv_data.append([m for m in metrics.values() if type(m) != list])
-
-            if DEBUGGING: utils.debug_stats(G, step, metrics)
+        if CALCULATE_METRICS:
+            metrics_extractor.extract_data(step)
 
     traci.close()
 
     if SAVE_RESULTS:
-        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{(step - 1):.0f}s_{DISTANCE_THRESHOLD}m/"
-        os.makedirs(outputPath, exist_ok = True)
-
-        vis.generate_histograms(csv_data, outputPath)
-        vis.generate_heat_map(geoPosAPs, outputPath)
+        metrics_extractor.save_data()
 
 if __name__ == "__main__": main()
