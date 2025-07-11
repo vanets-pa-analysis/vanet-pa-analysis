@@ -67,7 +67,7 @@ class BaseMetricExtractor(ABC):
         Graph Density,
         Number of cars
     """
-    def _extract_data(self, articulation_points):
+    def _extract_data(self, articulation_points, last_positions = LAST_POSITIONS, pa_lifespan = PA_LIFESPAN):
 
         n: int = len(articulation_points)
 
@@ -82,13 +82,13 @@ class BaseMetricExtractor(ABC):
             "fragmentation_impact"          : 0.0,
             "k_connectivity"                : 0.0,
             "len_articulation_points"       : n,
-            "articulation_points_percentage": n / self.G.number_of_nodes() * 100 * n,
-            "density"                       : nx.density(self.G) * 100 * n,
+            "articulation_points_percentage": n / self.G.number_of_nodes() * 100,
+            "density"                       : nx.density(self.G) * 100,
             "number_of_cars"                : self.G.number_of_nodes(),
             "articulation_points"           : articulation_points,
         }
 
-        if n == 0: return (metrics, geographical_positions)
+        if n == 0: return metrics, geographical_positions
 
         try:
             eigenvector = nx.eigenvector_centrality(self.G, max_iter = 500)
@@ -101,14 +101,14 @@ class BaseMetricExtractor(ABC):
 
         for ap in articulation_points:
 
-            self.PA_LIFESPAN[ap] = self.PA_LIFESPAN.get(ap, 0) + 1
+            pa_lifespan[ap] = pa_lifespan.get(ap, 0) + 1
 
             metrics["betweenness"]          += betweenness[ap]
             metrics["degree"]               += self.G.degree(ap)
             metrics["closeness"]            += closeness[ap]
             metrics["eigenvector"]          += eigenvector[ap]
-            metrics["lifespan"]             += self.PA_LIFESPAN[ap]
-            metrics["mobility"]             += self.relative_mobility(ap)
+            metrics["lifespan"]             += pa_lifespan[ap]
+            metrics["mobility"]             += self.relative_mobility(ap, last_positions)
             metrics["fragmentation_impact"] += self.fragmentation_impact(ap) - components
             # metrics["k_connectivity"]       += min(local_node_connectivity(self.G, ap, v) for v in self.G.nodes if v != ap)
 
@@ -116,44 +116,58 @@ class BaseMetricExtractor(ABC):
 
         self._calculate_average(metrics, n)
 
-        return (metrics, geographical_positions)
+        return metrics, geographical_positions
 
     def ap_geographical_position(self, articulation_point: str):
         x, y = self.positions[articulation_point]
         lon, lat = traci.simulation.convertGeo(x, y)
         return (lat, lon)
 
-    def relative_mobility(self, articulation_point: str):
+    def relative_mobility(self, articulation_point: str, last_positions: dict):
 
         result = 0
 
-        if articulation_point in self.LAST_POSITIONS:
+        if articulation_point in last_positions:
 
-            x0, y0 = self.LAST_POSITIONS[articulation_point]
+            x0, y0 = last_positions[articulation_point]
             x1, y1 = self.positions[articulation_point]
             dx, dy = x1 - x0, y1 - y0
 
             result = (dx ** 2 + dy ** 2) ** 0.5
 
-        self.LAST_POSITIONS[articulation_point] = self.positions[articulation_point]
+        last_positions[articulation_point] = self.positions[articulation_point]
 
         return result
 
     def fragmentation_impact(self, ap: str):
 
+        vizinhos = list(self.G.neighbors(ap))
         self.G.remove_node(ap)
 
         number_of_connected_components = nx.number_connected_components(self.G)
 
         self.G.add_node(ap)
-        for vizinho in self.G.neighbors(ap):
+        for vizinho in vizinhos:
             self.G.add_edge(ap, vizinho)
 
         return number_of_connected_components
 
     def _calculate_average(self, metrics: dict, n: int) -> None:
+
+        # NOTE: DRY Violated!
+        lista = {
+            "betweenness",
+            "degree",
+            "closeness",
+            "eigenvector",
+            "lifespan",
+            "mobility",
+            "fragmentation_impact",
+            "k_connectivity",
+        }
+
         for m in metrics:
-            if type(metrics[m]) == float:
+            if m in lista:
                 metrics[m] /= n
 
 class ConcreteClass1(BaseMetricExtractor):
@@ -186,9 +200,11 @@ class ConcreteClass1(BaseMetricExtractor):
 class ConcreteClass2(BaseMetricExtractor):
 
     global_data, cars_data, buses_data = [], [], []
-    global_geographical_positions = []
-    cars_geographical_positions = []
-    buses_geographical_positions = []
+    global_geo_pos, cars_geo_pos, buses_geo_pos = [], [], []
+
+    GLOBAL_PA_LIFESPAN, GLOBAL_LAST_POSITIONS = {}, {}
+    BUSES_PA_LIFESPAN, BUSES_LAST_POSITIONS = {}, {}
+    CARS_PA_LIFESPAN, CARS_LAST_POSITIONS = {}, {}
 
     def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False) -> None:
         super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging)
@@ -212,15 +228,19 @@ class ConcreteClass2(BaseMetricExtractor):
             else:
                 articulation_points_cars.append(ap)
 
-        metrics, coordenates = self._extract_data(global_articulation_points)
+        # NOTE:
+        # Pensar na possibilidade de usar @decorator para resolver o problema das variaveis "globais"
+        # LAST_POSITIONS, PA_LIFESPAN
+
+        metrics, coordenates = self._extract_data(global_articulation_points, self.GLOBAL_LAST_POSITIONS, self.GLOBAL_PA_LIFESPAN)
         self.global_data.append(metrics)
         # self.global_geographical_positions.append(coordenates)
 
-        buses_metrics, coordenates = self._extract_data(articulation_points_buses)
+        buses_metrics, coordenates = self._extract_data(articulation_points_buses, self.BUSES_LAST_POSITIONS, self.BUSES_PA_LIFESPAN)
         self.buses_data.append(buses_metrics)
         # self.buses_geographical_positions.append(coordenates)
 
-        cars_metrics, coordenates = self._extract_data(articulation_points_cars)
+        cars_metrics, coordenates = self._extract_data(articulation_points_cars, self.CARS_LAST_POSITIONS, self.CARS_PA_LIFESPAN)
         self.cars_data.append(cars_metrics)
         # self.cars_geographical_positions.append(coordenates)
 
