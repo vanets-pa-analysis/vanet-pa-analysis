@@ -2,11 +2,11 @@ import traci
 from traci import simulation as sim
 
 import scripts.utils as utils
-from teste import ConcreteClass1
+from teste import ConcreteClass1, ConcreteClass2
 
 ###################################################
 
-TRACE_NAME              = "santa_tereza"
+TRACE_NAME              = "luxembourg"
 # TRACE_TYPE              = Extractors.Extractor1
 SUMO_CONFIG             = "sumo-gui"
 METRICS_EVERY_N_SECONDS = 60
@@ -20,7 +20,7 @@ CALCULATE_METRICS       = True
 TRACES_PATH = {
     "santa_tereza": "santa_tereza/santa_tereza",
     "sao_paulo"   : "sao_paulo/sao_paulo",
-    "luxemburg"   : "LuSTScenario/scenario/due.actuated",
+    "luxembourg"   : "LuSTScenario/scenario/due.actuated",
     "monaco"      : "MoSTScenario/scenario/most",
 }
 
@@ -32,10 +32,12 @@ def main():
 
     traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE])
 
-    metrics_extractor = ConcreteClass1(
+    # TODO: Change this to the ExtractorFactry
+    metrics_extractor = ConcreteClass2(
         distance_threshold = DISTANCE_THRESHOLD,
         metrics_every_n_seconds = METRICS_EVERY_N_SECONDS,
-        use_quad_tree = (True, BOUNDS)
+        use_quad_tree = (True, BOUNDS),
+        debugging = DEBUGGING
         # multithreaded = False
     )
 
@@ -52,6 +54,7 @@ def main():
     traci.close()
 
     if SAVE_RESULTS:
-        metrics_extractor.save_data()
+        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{(step - 1):.0f}s_{DISTANCE_THRESHOLD}m/"
+        metrics_extractor.save_data(outputPath)
 
 if __name__ == "__main__": main()

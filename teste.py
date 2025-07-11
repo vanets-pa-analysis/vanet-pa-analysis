@@ -1,3 +1,4 @@
+import os
 import traci
 
 from abc import ABC, abstractmethod
@@ -11,6 +12,8 @@ from scripts.build_graph import build_graph
 import networkx as nx
 from networkx.algorithms.connectivity import local_node_connectivity
 
+import scripts.visualization as vis
+
 class BaseMetricExtractor(ABC):
 
     G: nx.Graph
@@ -19,20 +22,37 @@ class BaseMetricExtractor(ABC):
     DISTANCE_THRESHOLD: int
     USE_QUAD_TREE: bool | tuple
     METRICS_EVERY_N_SECONDS: int
+    DEBUGGING: bool
 
-    def __init__(self, DISTANCE_THRESHOLD, USE_QUAD_TREE, METRICS_EVERY_N_SECONDS) -> None:
+    METRICAS_MAP = {
+        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
+        "degree": ["Mean Degree", "Average AP Node Degree"],
+        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
+        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
+        "lifespan": ["Time (s)", "Average AP Lifespan"],
+        "mobility": ["Percentage (%)", "Average AP Mobility"],
+        "fragmentation_impact": ["Normalized Value", "Fragmentation Impact"],
+        # "k_connectivity": ["Integer (k)", "K-Connectivity"],
+        "len_articulation_points": ["Number of Articulation Points", "Number of Articulation Points"],
+        "articulation_points_percentage": ["Articulation Points (%)", "Proportion of Articulation Points among Vehicles"],
+        "density": ["Density (%)", "Graph Density"],
+        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
+    }
+
+    def __init__(self, distance_threshold, use_quad_tree, metrics_every_n_seconds, debuggin) -> None:
 
         super().__init__()
 
-        self.DISTANCE_THRESHOLD = DISTANCE_THRESHOLD
-        self.USE_QUAD_TREE = USE_QUAD_TREE
-        self.METRICS_EVERY_N_SECONDS = METRICS_EVERY_N_SECONDS
+        self.DISTANCE_THRESHOLD = distance_threshold
+        self.USE_QUAD_TREE = use_quad_tree
+        self.METRICS_EVERY_N_SECONDS = metrics_every_n_seconds
+        self.DEBUGGING = debuggin
 
     @abstractmethod
     def extract_data(self, step: float) -> None: pass
 
     @abstractmethod
-    def save_data(self) -> None: pass
+    def save_data(self, outputPath: str) -> None: pass
 
     """
     Calcula métricas médias para pontos de articulação:
@@ -62,8 +82,8 @@ class BaseMetricExtractor(ABC):
             "fragmentation_impact"          : 0.0,
             "k_connectivity"                : 0.0,
             "len_articulation_points"       : n,
-            "articulation_points_percentage": int(n / self.G.number_of_nodes() * 100),
-            "density"                       : int(nx.density(self.G) * 100),
+            "articulation_points_percentage": n / self.G.number_of_nodes() * 100 * n,
+            "density"                       : nx.density(self.G) * 100 * n,
             "number_of_cars"                : self.G.number_of_nodes(),
             "articulation_points"           : articulation_points,
         }
@@ -105,7 +125,7 @@ class BaseMetricExtractor(ABC):
 
     def relative_mobility(self, articulation_point: str):
 
-        self.LAST_POSITIONS[articulation_point] = self.positions[articulation_point]
+        result = 0
 
         if articulation_point in self.LAST_POSITIONS:
 
@@ -113,9 +133,11 @@ class BaseMetricExtractor(ABC):
             x1, y1 = self.positions[articulation_point]
             dx, dy = x1 - x0, y1 - y0
 
-            return (dx ** 2 + dy ** 2) ** 0.5
+            result = (dx ** 2 + dy ** 2) ** 0.5
 
-        return 0
+        self.LAST_POSITIONS[articulation_point] = self.positions[articulation_point]
+
+        return result
 
     def fragmentation_impact(self, ap: str):
 
@@ -139,8 +161,8 @@ class ConcreteClass1(BaseMetricExtractor):
     data = []
     geographical_positions = []
 
-    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds = 60) -> None:
-        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds)
+    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False) -> None:
+        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging)
 
     @override
     def extract_data(self, step: float) -> None:
@@ -154,19 +176,22 @@ class ConcreteClass1(BaseMetricExtractor):
 
         metrics, coordenates = self._extract_data(articulation_points)
         self.data.append(metrics)
-        self.geographical_positions.append(coordenates)
+        # self.geographical_positions.append(coordenates)
 
     @override
-    def save_data(self) -> None:
-        print("Method 'save_data' is not yet implemented in ConcreteClass1")
+    def save_data(self, outputPath: str) -> None:
+        os.makedirs(outputPath, exist_ok = True)
+        vis.generate_histograms(self.data, outputPath, self.METRICAS_MAP)
 
 class ConcreteClass2(BaseMetricExtractor):
 
-    data = []
-    geographical_positions = []
+    global_data, cars_data, buses_data = [], [], []
+    global_geographical_positions = []
+    cars_geographical_positions = []
+    buses_geographical_positions = []
 
-    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds = 60) -> None:
-        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds)
+    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False) -> None:
+        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging)
 
     @override
     def extract_data(self, step: float) -> None:
@@ -176,7 +201,7 @@ class ConcreteClass2(BaseMetricExtractor):
         self.positions = utils.get_vehicle_positions()
         self.G = build_graph(self.positions, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
 
-        global_articulation_points = nx.articulation_points(self.G)
+        global_articulation_points = list(nx.articulation_points(self.G))
 
         articulation_points_cars, articulation_points_buses = [], []
 
@@ -187,27 +212,31 @@ class ConcreteClass2(BaseMetricExtractor):
             else:
                 articulation_points_cars.append(ap)
 
-        # metrics, coordenates = self._extract_data(articulation_points)
-        # self.data.append(metrics)
-        # self.geographical_positions.append(coordenates)
+        metrics, coordenates = self._extract_data(global_articulation_points)
+        self.global_data.append(metrics)
+        # self.global_geographical_positions.append(coordenates)
 
+        buses_metrics, coordenates = self._extract_data(articulation_points_buses)
+        self.buses_data.append(buses_metrics)
+        # self.buses_geographical_positions.append(coordenates)
+
+        cars_metrics, coordenates = self._extract_data(articulation_points_cars)
+        self.cars_data.append(cars_metrics)
+        # self.cars_geographical_positions.append(coordenates)
+
+    @override
+    def save_data(self, outputPath: str) -> None:
+
+        os.makedirs(outputPath, exist_ok = True)
+
+        vis.generate_histograms(self.global_data, outputPath + "global_", self.METRICAS_MAP)
+        vis.generate_histograms(self.buses_data, outputPath + "buses_", self.METRICAS_MAP)
+        vis.generate_histograms(self.cars_data, outputPath + "cars_", self.METRICAS_MAP)
+
+# TODO: Implement Extractor Factory
 # class Extractors(Enum):
 #     Extractor1 = ConcreteClass1,
 #     Extractor2 = ConcreteClass2,
 
 # def extractor_factory(trace_type, trace_data):
 #     return trace_type.value()
-
-# Salvar estatísticas
-# metrics, coordenates = calcular_metricas(G, positions)
-# geoPosAPs.append(coordenates)
-# csv_data.append([m for m in metrics.values() if type(m) != list])
-
-# if DEBUGGING: utils.debug_stats(G, step, metrics)
-
-
-# outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{(step - 1):.0f}s_{DISTANCE_THRESHOLD}m/"
-# os.makedirs(outputPath, exist_ok = True)
-
-# vis.generate_histograms(csv_data, outputPath)
-# vis.generate_heat_map(geoPosAPs, outputPath)

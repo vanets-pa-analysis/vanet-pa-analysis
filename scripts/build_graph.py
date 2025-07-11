@@ -77,52 +77,6 @@ def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx
 
     return G
 
-def draw_graph_with_real_positions(G, positions, save_path=None, show=True, draw_radius=False, radius=100):
-
-    """
-    Desenha o grafo com os nós posicionados em suas coordenadas reais (x, y),
-    com a opção de desenhar um raio ao redor de cada nó.
-
-    Parâmetros:
-        G (networkx.Graph): O grafo com os veículos como nós.
-        positions (dict): Dicionário {vehicle_id: (x, y)} com posições dos veículos.
-        save_path (str): Caminho para salvar a imagem (opcional).
-        show (bool): Se True, exibe a imagem. Se False, apenas salva (se save_path for definido).
-        draw_radius (bool): Se True, desenha círculos de raio `radius` ao redor de cada nó.
-        radius (float): O raio em metros para os círculos.
-    """
-    plt.figure(figsize=(10, 10))
-
-    # Desenha o grafo com posições reais
-    nx.draw(
-        G,
-        pos=positions,
-        node_size=30,
-        node_color='blue',
-        edge_color='gray',
-        with_labels=True
-    )
-
-    # Desenha círculos de raio ao redor dos nós
-    if draw_radius:
-        ax = plt.gca()
-        for x, y in positions.values():
-            circle = plt.Circle((x, y), radius, color='red', fill=False, linestyle='--', linewidth=0.5)
-            ax.add_patch(circle)
-
-    plt.xlabel("X (metros)")
-    plt.ylabel("Y (metros)")
-    plt.title("Vehicle Graph with Real Positions")
-    plt.axis("equal")
-
-    if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
-
-    if show:
-        plt.show()
-    else:
-        plt.close()
-
 # def compare_graphs(G1, G2):
 
 #     if nx.is_isomorphic(G1, G2):
