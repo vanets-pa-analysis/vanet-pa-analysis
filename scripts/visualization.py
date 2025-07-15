@@ -4,9 +4,10 @@ import networkx as nx
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from numbers import Number
 from folium.plugins import HeatMap
 
-def draw_graph_with_real_positions(G, positions, radius, save_path = None, show = True, draw_radius = False):
+def draw_graph_with_real_positions(G, positions, save_path=None, show=True, draw_radius=False, radius=100):
 
     """
     Desenha o grafo com os nós posicionados em suas coordenadas reais (x, y),
@@ -104,84 +105,52 @@ def generate_heat_map(geoPosAPs, outputPath):
     # Salvar o HTML interativo
     m.save(outputPath + "heatmap_pa.html")
 
-def save_csv(outputPath, csvData, metricas_map):
+def save_csv(metrics, outputPath, metrics_map):
 
     outputPath += "histogram.csv"
 
     # Salvar histograma
-    with open(outputPath, "w") as f:
+    with open(outputPath, "w") as file:
 
-        csv_header = ["tempo"]
+        csv_header = ["time"]
 
-        for key in metricas_map:
+        for key in metrics_map:
             csv_header.append(key)
 
-        f.write(",".join(csv_header) + "\n")
+        file.write(",".join(csv_header) + "\n")
 
-        for tempo, metricas in enumerate(csvData):
-            valores = [f"{tempo}"] + [f"{value:.4g}" for value in metricas]
-            f.write(",".join(valores) + "\n")
+        for time, m in enumerate(metrics):
+            values = [f"{time}"] + [f"{m[metric_key]:.4g}" for metric_key in metrics_map]
+            file.write(",".join(values) + "\n")
 
     return outputPath
 
-def generate_histograms(csvData, outputPath):
+def generate_histograms(metrics, output_path, metrics_map):
 
-    metricas_map = {
-        "quantidadePAs": ["Number of Articulation Points", "Number of Articulation Points"],
-        "articulation_points_percentage": ["Articulation Points (%)", "Proportion of Articulation Points among Vehicles"],
-        "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
-        "degree": ["Mean Degree", "Average AP Node Degree"],
-        "closeness": ["Normalized Mean", "Average AP Closeness Centrality"],
-        "eigenvector": ["Normalized Mean", "Average AP Eigenvector Centrality"],
-        "lifespan": ["Time (s)", "Average AP Lifespan"],
-        "mobility": ["Percentage (%)", "Average AP Mobility"],
-        "fragmentationImpact": ["Normalized Value", "Fragmentation Impact"],
-        "k_connectivity": ["Integer (k)", "K-Connectivity"],
-        "density": ["Density (%)", "Graph Density"],
-        "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
-    }
+    csv_file_path = save_csv(metrics, output_path, metrics_map)
+    df = pd.read_csv(csv_file_path)
 
-    csvFile = save_csv(outputPath, csvData, metricas_map)
-
-    df = pd.read_csv(csvFile)
-
-    # Converter tempo em formato legível
-    df["hour"] = df["tempo"] // 60
-    df["minute_of_hour"] = df["tempo"] % 60
+    # Converter time em formato legível
+    df["hour"] = df["time"] // 60
+    df["minute_of_hour"] = df["time"] % 60
     df["time"] = df["hour"].astype(str).str.zfill(2) + ":" + df["minute_of_hour"].astype(str).str.zfill(2)
 
     # NOTE: metricas["metrica"][0] -> Unidade de Medida
     # NOTE: metricas["metrica"][1] -> Nome para o título do gráfico
 
-    """
-        Betweenness, Closeness e Eigenvector Centrality geralmente são valores normalizados entre 0 e 1 (ou em média por nó), então indiquei como média normalizada.
+    output_path += "histograms"
+    os.makedirs(output_path, exist_ok=True)
 
-        Degree: média dos graus dos nós — "Média de Grau".
-
-        Lifespan: suponho que seja o tempo de permanência de um nó (ex: veículo) no grafo — "Tempo (s)".
-
-        Mobility: dado que vem de simulações SUMO, é comum representar mobilidade como porcentagem de movimento/alcance — "Porcentagem (%)".
-
-        Fragmentation Impact: medida adimensional usada para avaliar o impacto da fragmentação — "Valor Normalizado".
-
-        K-Connectivity: nível de conectividade k do grafo, é um número inteiro.
-
-        Number of Cars: contador direto — "Quantidade".
-    """
-
-    outputPath += "histograms"
-    os.makedirs(outputPath, exist_ok=True)
-
-    for metrica in metricas_map:
+    for metrica in metrics_map:
         plt.figure(figsize=(15, 5))
         plt.plot(df["time"], df[metrica], linewidth=1.2)
-        plt.title(f"{metricas_map[metrica][1]} over time")
+        plt.title(f"{metrics_map[metrica][1]} over time")
         plt.xlabel("Horário")
-        plt.ylabel(metricas_map[metrica][0])
+        plt.ylabel(metrics_map[metrica][0])
         plt.xticks(df["time"][::60], rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(f"{outputPath}/{metrica}.png")
+        plt.savefig(f"{output_path}/{metrica}.png")
         plt.close()
 
 # NOTE: Jeito alternativo de salvar o Histograma

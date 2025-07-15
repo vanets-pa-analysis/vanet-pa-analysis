@@ -78,8 +78,10 @@ class QuadTreeNode:
                 if child:
                     inserted |= child.insert(rect)
 
+            # WARN: Is this an error?
             if not inserted:
-                print("Capacity must be greater than 0")
+                pass
+                # print("Capacity must be greater than 0")
 
         self.objects = []
 

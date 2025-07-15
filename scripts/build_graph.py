@@ -1,27 +1,26 @@
 import traci
 import networkx as nx
 
+import matplotlib.pyplot as plt
+
 from scripts.quad_tree import Rectangle
 from scripts.quad_tree import QuadTreeNode
 
+def euclidean_distance(dx, dy):
+    return (dx ** 2 + dy ** 2) ** 0.5
+
 def build_quad_tree(positions, bounds, distance_threshold):
-
-    vehicles = list(positions.keys())
-
-    min_range = distance_threshold
 
     x = bounds["xmin"] + bounds["xmax"] / 2
     y = bounds["ymin"] + bounds["ymax"] / 2
     w = bounds["xmax"] - bounds["xmin"] / 2
     h = bounds["ymax"] - bounds["ymin"] / 2
 
-    root = QuadTreeNode(Rectangle(x, y, w, h), min_range)
+    root = QuadTreeNode(Rectangle(x, y, w, h), distance_threshold)
 
-    for i in range(0, len(vehicles)):
-
-        x, y = positions[vehicles[i]]
-
-        root.insert(Rectangle(x, y, min_range, min_range, id=vehicles[i]))
+    for vehicle in positions.keys():
+        x, y = positions[vehicle]
+        root.insert(Rectangle(x, y, distance_threshold, distance_threshold, id=vehicle))
 
     return root
 
@@ -31,21 +30,18 @@ def build_graph_with_qt(positions, distance_threshold, bounds) -> nx.Graph:
 
     G = nx.Graph()
 
-    vehicles = list(positions.keys())
-    min_range = distance_threshold
+    for vi in positions.keys():
 
-    for i in range(len(vehicles)):
-
-        vi, (ix, iy) = vehicles[i], positions[vehicles[i]]
         G.add_node(vi)
 
-        for vj in qt.search(Rectangle(ix, iy, min_range, min_range, id=vi)):
+        ix, iy = positions[vi]
+
+        for vj in qt.search(Rectangle(ix, iy, distance_threshold, distance_threshold, id=vi)):
 
             jx, jy = positions[vj.id]
-            dx = ix - jx
-            dy = iy - jy
+            dx, dy = ix - jx, iy - jy
 
-            if (dx**2 + dy**2)**0.5 <= distance_threshold and vi != vj.id:
+            if euclidean_distance(dx, dy) <= distance_threshold and vi != vj.id:
                 G.add_edge(vi, vj.id)
 
     return G
@@ -59,18 +55,20 @@ def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx
 
     vehicles = list(positions.keys())
 
-    for i in range(len(vehicles)):
+    for i, vi in enumerate(vehicles):
 
-        vi, pi = vehicles[i], positions[vehicles[i]]
         G.add_node(vi)
+
+        ix, iy = positions[vi]
 
         for j in range(i + 1, len(vehicles)):
 
-            vj, pj = vehicles[j], positions[vehicles[j]]
-            dx = pi[0] - pj[0]
-            dy = pi[1] - pj[1]
+            vj = vehicles[j]
 
-            if (dx ** 2 + dy ** 2) ** 0.5 <= distance_threshold:
+            jx, jy = positions[vj]
+            dx, dy = ix - jx, iy - jy
+
+            if euclidean_distance(dx, dy) <= distance_threshold and vi != vj:
                 G.add_edge(vi, vj)
 
     return G

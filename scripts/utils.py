@@ -1,18 +1,5 @@
-import traci
 import networkx as nx
 import xml.etree.ElementTree as ET
-import matplotlib.pyplot as plt
-from math import inf
-
-def get_vehicle_positions():
-
-    positions = {}
-
-    for vid in traci.vehicle.getIDList():
-        x, y = traci.vehicle.getPosition(vid)
-        positions[vid] = (x, y)
-
-    return positions
 
 def getNextSimID():
 
