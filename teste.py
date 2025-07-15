@@ -2,10 +2,7 @@ import os
 import traci
 
 from abc import ABC, abstractmethod
-from enum import Enum
 from typing import override
-
-import scripts.utils as utils
 
 from scripts.build_graph import build_graph
 
@@ -16,8 +13,11 @@ import scripts.visualization as vis
 
 class BaseMetricExtractor(ABC):
 
-    G: nx.Graph
+    G: nx.Graph = nx.Graph()
     positions: dict
+    subscribed_vehicles = set()
+    progress_bar = None
+
     PA_LIFESPAN, LAST_POSITIONS = {}, {}
     DISTANCE_THRESHOLD: int
     USE_QUAD_TREE: bool | tuple
@@ -33,15 +33,17 @@ class BaseMetricExtractor(ABC):
         "mobility": ["Percentage (%)", "Average AP Mobility"],
         "fragmentation_impact": ["Normalized Value", "Fragmentation Impact"],
         # "k_connectivity": ["Integer (k)", "K-Connectivity"],
-        "len_articulation_points": ["Number of Articulation Points", "Number of Articulation Points"],
+        "number_of_articulation_points": ["Number of Articulation Points", "Number of Articulation Points"],
         "articulation_points_percentage": ["Articulation Points (%)", "Proportion of Articulation Points among Vehicles"],
         "density": ["Density (%)", "Graph Density"],
         "number_of_cars": ["Quantity", "Number of Cars in the Graph"],
     }
 
-    def __init__(self, distance_threshold, use_quad_tree, metrics_every_n_seconds, debuggin) -> None:
+    def __init__(self, distance_threshold, use_quad_tree, metrics_every_n_seconds, debuggin, progress_bar) -> None:
 
         super().__init__()
+
+        self.progress_bar = progress_bar
 
         self.DISTANCE_THRESHOLD = distance_threshold
         self.USE_QUAD_TREE = use_quad_tree
@@ -53,6 +55,44 @@ class BaseMetricExtractor(ABC):
 
     @abstractmethod
     def save_data(self, outputPath: str) -> None: pass
+
+    @abstractmethod
+    def get_debug_data(self) -> dict: pass
+
+    def update_vehicle_positions(self) -> dict:
+
+        self.subscribed_vehicles
+
+        current_vehicle_ids = set(traci.vehicle.getIDList())
+        new_vehicles = current_vehicle_ids - self.subscribed_vehicles
+
+        for vid in new_vehicles:
+            traci.vehicle.subscribe(vid, (traci.constants.VAR_POSITION,))
+
+        self.subscribed_vehicles |= new_vehicles
+
+        results = traci.vehicle.getAllSubscriptionResults()
+
+        return {
+            vehicle_id: results[vehicle_id][traci.constants.VAR_POSITION]
+            for vehicle_id in results
+            if traci.constants.VAR_POSITION in results[vehicle_id]
+        }
+
+    def _get_debug_data(self) -> dict:
+
+        debug_data = {}
+
+        if self.G.number_of_nodes() > 0:
+            debug_data["Vertices"] = self.G.number_of_nodes()
+            debug_data["APs"] = len(list(nx.articulation_points(self.G)))
+            debug_data["Edges"] = self.G.number_of_edges()
+            debug_data["Density"] = f"{nx.density(self.G) * 100:.2f}%"
+
+        else:
+            debug_data["cars"] = len(traci.vehicle.getIDList())
+
+        return debug_data
 
     """
     Calcula métricas médias para pontos de articulação:
@@ -81,7 +121,7 @@ class BaseMetricExtractor(ABC):
             "mobility"                      : 0.0,
             "fragmentation_impact"          : 0.0,
             "k_connectivity"                : 0.0,
-            "len_articulation_points"       : n,
+            "number_of_articulation_points" : n,
             "articulation_points_percentage": n / self.G.number_of_nodes() * 100,
             "density"                       : nx.density(self.G) * 100,
             "number_of_cars"                : self.G.number_of_nodes(),
@@ -172,50 +212,68 @@ class BaseMetricExtractor(ABC):
 
 class ConcreteClass1(BaseMetricExtractor):
 
-    data = []
+    metrics_data = []
     geographical_positions = []
 
-    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False) -> None:
-        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging)
+    def __init__(self, distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar) -> None:
+        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar)
 
     @override
     def extract_data(self, step: float) -> None:
 
         if step % self.METRICS_EVERY_N_SECONDS != 0: return
 
-        self.positions = utils.get_vehicle_positions()
+        self.positions = self.update_vehicle_positions()
         self.G = build_graph(self.positions, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
+
+        if (self.progress_bar):
+            self.progress_bar.set_postfix(self.get_debug_data())
 
         articulation_points = list(nx.articulation_points(self.G))
 
         metrics, coordenates = self._extract_data(articulation_points)
-        self.data.append(metrics)
+        self.metrics_data.append(metrics)
         # self.geographical_positions.append(coordenates)
 
     @override
     def save_data(self, outputPath: str) -> None:
         os.makedirs(outputPath, exist_ok = True)
-        vis.generate_histograms(self.data, outputPath, self.METRICAS_MAP)
+        vis.generate_histograms(self.metrics_data, outputPath, self.METRICAS_MAP)
+
+    @override
+    def get_debug_data(self) -> dict:
+
+        return self._get_debug_data()
+
+        # if self.current_step % self.METRICS_EVERY_N_SECONDS != 0 or len(self.metrics_data) == 0:
+        #     return self.debug_data
+
+        # return self._get_debug_data(self.metrics_data[-1])
 
 class ConcreteClass2(BaseMetricExtractor):
 
-    global_data, cars_data, buses_data = [], [], []
+    global_metrics_data, cars_metrics_data, buses_metrics_data = [], [], []
     global_geo_pos, cars_geo_pos, buses_geo_pos = [], [], []
 
     GLOBAL_PA_LIFESPAN, GLOBAL_LAST_POSITIONS = {}, {}
     BUSES_PA_LIFESPAN, BUSES_LAST_POSITIONS = {}, {}
     CARS_PA_LIFESPAN, CARS_LAST_POSITIONS = {}, {}
 
-    def __init__(self, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False) -> None:
-        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging)
+    def __init__(self, distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar) -> None:
+        super().__init__(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar)
 
     @override
     def extract_data(self, step: float) -> None:
 
         if step % self.METRICS_EVERY_N_SECONDS != 0: return
 
-        self.positions = utils.get_vehicle_positions()
-        self.G = build_graph(self.positions, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
+        self.positions = self.update_vehicle_positions()
+        # self.G = build_graph(self.positions, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
+
+        if (self.progress_bar):
+            self.progress_bar.set_postfix(self.get_debug_data())
+
+        return
 
         global_articulation_points = list(nx.articulation_points(self.G))
 
@@ -233,15 +291,15 @@ class ConcreteClass2(BaseMetricExtractor):
         # LAST_POSITIONS, PA_LIFESPAN
 
         metrics, coordenates = self._extract_data(global_articulation_points, self.GLOBAL_LAST_POSITIONS, self.GLOBAL_PA_LIFESPAN)
-        self.global_data.append(metrics)
+        self.global_metrics_data.append(metrics)
         # self.global_geographical_positions.append(coordenates)
 
         buses_metrics, coordenates = self._extract_data(articulation_points_buses, self.BUSES_LAST_POSITIONS, self.BUSES_PA_LIFESPAN)
-        self.buses_data.append(buses_metrics)
+        self.buses_metrics_data.append(buses_metrics)
         # self.buses_geographical_positions.append(coordenates)
 
         cars_metrics, coordenates = self._extract_data(articulation_points_cars, self.CARS_LAST_POSITIONS, self.CARS_PA_LIFESPAN)
-        self.cars_data.append(cars_metrics)
+        self.cars_metrics_data.append(cars_metrics)
         # self.cars_geographical_positions.append(coordenates)
 
     @override
@@ -249,14 +307,44 @@ class ConcreteClass2(BaseMetricExtractor):
 
         os.makedirs(outputPath, exist_ok = True)
 
-        vis.generate_histograms(self.global_data, outputPath + "global_", self.METRICAS_MAP)
-        vis.generate_histograms(self.buses_data, outputPath + "buses_", self.METRICAS_MAP)
-        vis.generate_histograms(self.cars_data, outputPath + "cars_", self.METRICAS_MAP)
+        vis.generate_histograms(self.global_metrics_data, outputPath + "global_", self.METRICAS_MAP)
+        vis.generate_histograms(self.buses_metrics_data, outputPath + "buses_", self.METRICAS_MAP)
+        vis.generate_histograms(self.cars_metrics_data, outputPath + "cars_", self.METRICAS_MAP)
 
-# TODO: Implement Extractor Factory
-# class Extractors(Enum):
-#     Extractor1 = ConcreteClass1,
-#     Extractor2 = ConcreteClass2,
+    @override
+    def get_debug_data(self) -> dict:
 
-# def extractor_factory(trace_type, trace_data):
-#     return trace_type.value()
+        return self._get_debug_data()
+
+        # if self.current_step % self.METRICS_EVERY_N_SECONDS != 0 or len(self.global_metrics_data) == 0:
+        #     return self._get_debug_data()
+
+        # return self._get_debug_data(self.global_metrics_data[-1])
+
+class ConcreteClassDummy(BaseMetricExtractor):
+
+    def __init__(self):
+        super().__init__(0, False, 0, False, None)
+
+    @override
+    def extract_data(self, step: float) -> None:
+        print('ConcreteClassDummy is not supposed to implement the "extract_data method"')
+
+    @override
+    def save_data(self, outputPath: str) -> None:
+        print('ConcreteClassDummy is not supposed to implement the "save_data"')
+
+    @override
+    def get_debug_data(self) -> dict:
+        print('ConcreteClassDummy is not supposed to implement the "get_debug_data method"')
+        return {}
+
+def extractor_factory(trace_type, distance_threshold = 100, use_quad_tree: tuple | bool = False, metrics_every_n_seconds: int = 60, debugging: bool = False, progress_bar = None) -> BaseMetricExtractor:
+
+    if trace_type in { "santa_tereza", "sao_paulo" }:
+        return ConcreteClass1(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar)
+
+    if trace_type in { "luxembourg", "monaco" }:
+        return ConcreteClass2(distance_threshold, use_quad_tree, metrics_every_n_seconds, debugging, progress_bar)
+
+    return ConcreteClassDummy()
