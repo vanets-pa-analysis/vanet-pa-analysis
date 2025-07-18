@@ -2,6 +2,7 @@ TODO:
 	- Ajeitar os horários do histograma
 	- Rodar simulações com Luxemburgo e Monaco
 	- Ler: Como foi contruído o trace de Luxemburgo https://ieeexplore.ieee.org/document/7906642
+	- Alterar o jeito que salvamos as posicoes, para salvar lat / lon de uma vez
 
 -----------------------------------------------------------------------------------
 
@@ -13,6 +14,8 @@ FEITOS:
 	- Ser capaz de extrair informações específicas de cada tipo diferente de veículo
 		- Pensar na modelagem disso
 	- Arrumar Kconnectivity
+	- salvar 'positinos' no grafo, para restaura com .gpickle
+	- Separar simulação / geração dos grafos da extração das métricas
 
 -----------------------------------------------------------------------------------
 DESISISTMOS:

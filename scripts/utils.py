@@ -1,9 +1,9 @@
 import networkx as nx
 import xml.etree.ElementTree as ET
 
-def getNextSimID():
+def getNextSimID(path = "output"):
 
-    path = "output/lastSimulationID.txt"
+    path += "/last_simulation_ID.txt"
 
     # Read the current ID
     with open(path, "r") as f:

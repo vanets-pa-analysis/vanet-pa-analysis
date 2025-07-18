@@ -30,9 +30,9 @@ def build_graph_with_qt(positions, distance_threshold, bounds) -> nx.Graph:
 
     G = nx.Graph()
 
-    for vi in positions.keys():
+    for vi in positions:
 
-        G.add_node(vi)
+        G.add_node(vi, pos=positions[vi])
 
         ix, iy = positions[vi]
 
@@ -57,7 +57,7 @@ def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx
 
     for i, vi in enumerate(vehicles):
 
-        G.add_node(vi)
+        G.add_node(vi, pos=positions[vi])
 
         ix, iy = positions[vi]
 
@@ -72,6 +72,24 @@ def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx
                 G.add_edge(vi, vj)
 
     return G
+
+def update_vehicle_positions(subscribed_vehicles: set) -> dict:
+
+    current_vehicle_ids = set(traci.vehicle.getIDList())
+    new_vehicles = current_vehicle_ids - subscribed_vehicles
+
+    for vid in new_vehicles:
+        traci.vehicle.subscribe(vid, (traci.constants.VAR_POSITION,))
+
+    subscribed_vehicles |= new_vehicles
+
+    results = traci.vehicle.getAllSubscriptionResults()
+
+    return {
+        vehicle_id: results[vehicle_id][traci.constants.VAR_POSITION]
+        for vehicle_id in results
+        if traci.constants.VAR_POSITION in results[vehicle_id]
+    }
 
 # def compare_graphs(G1, G2):
 
