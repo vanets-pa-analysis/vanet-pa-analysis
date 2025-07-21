@@ -131,16 +131,16 @@ class BaseMetricExtractor(ABC):
             metrics["fragmentation_impact"] += self.fragmentation_impact(ap) - components
             # metrics["k_connectivity"]       += min(local_node_connectivity(self.G, ap, v) for v in self.G.nodes if v != ap)
 
-            # geographical_positions.append(self.ap_geographical_position(self.G.nodes[ap]["pos"]))
+            geographical_positions.append(self.G.nodes[ap]["pos"])
 
         self._calculate_average(metrics, n)
 
         return metrics, geographical_positions
 
-    def ap_geographical_position(self, pos: tuple):
-        x, y = pos
-        lon, lat = traci.simulation.convertGeo(x, y)
-        return (lat, lon)
+    # def ap_geographical_position(self, pos: tuple):
+    #     x, y = pos
+    #     lon, lat = traci.simulation.convertGeo(x, y)
+    #     return (lat, lon)
 
     def relative_mobility(self, articulation_point: str, last_positions: dict):
 
@@ -216,12 +216,13 @@ class SimpleExtractor(BaseMetricExtractor):
 
         metrics, coordenates = self._extract_data(articulation_points)
         self.metrics_data.append(metrics)
-        # self.geographical_positions.append(coordenates)
+        self.geographical_positions.append(coordenates)
 
     @override
     def save_data(self, outputPath: str) -> None:
         os.makedirs(outputPath, exist_ok = True)
         vis.generate_histograms(self.metrics_data, outputPath, self.METRICAS_MAP)
+        vis.generate_heat_map(self.geographical_positions, outputPath)
 
     @override
     def get_debug_data(self) -> dict:

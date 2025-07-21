@@ -1,5 +1,8 @@
 import networkx as nx
+import pickle
 import xml.etree.ElementTree as ET
+
+import traci
 
 def getNextSimID(path = "output"):
 
@@ -17,6 +20,12 @@ def getNextSimID(path = "output"):
         f.write(str(lastSimID))
 
     return lastSimID
+
+
+def ap_geographical_position(pos: tuple):
+        x, y = pos
+        lon, lat = traci.simulation.convertGeo(x, y)
+        return (lat, lon)
 
 def get_end_time(sumocfg_path) -> int:
 
@@ -62,6 +71,25 @@ def extract_net_path(sumocfg_path: str) -> str:
         raise ValueError("<net-file> tag is missing the 'value' attribute.")
 
     return net_path
+
+
+# def save_graph_pickle(graph: nx.Graph, filepath: str):
+#     """
+#     Salva um grafo NetworkX em formato binário (.gpickle) usando pickle.
+#     """
+#     with open(filepath, "wb") as f:
+#         pickle.dump(graph, f)
+#     print(f"Grafo salvo com sucesso em '{filepath}'.")
+
+
+# def load_graph_pickle(filepath: str) -> nx.Graph:
+#     """
+#     Carrega um grafo NetworkX salvo anteriormente com pickle.
+#     """
+#     with open(filepath, "rb") as f:
+#         graph = pickle.load(f)
+#     print(f"Grafo carregado com sucesso de '{filepath}'.")
+#     return graph
 
 def get_simulation_bounds(SUMOCFG_FILE):
 

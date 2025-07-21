@@ -46,7 +46,7 @@ def build_graph_with_qt(positions, distance_threshold, bounds) -> nx.Graph:
 
     return G
 
-def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx.Graph:
+def build_graph(positions, attribute, distance_threshold, use_quadTree = (False, {})) -> nx.Graph:
 
     if (use_quadTree[0]):
         return build_graph_with_qt(positions, distance_threshold, use_quadTree[1])
@@ -57,7 +57,7 @@ def build_graph(positions, distance_threshold, use_quadTree = (False, {})) -> nx
 
     for i, vi in enumerate(vehicles):
 
-        G.add_node(vi, pos=positions[vi])
+        G.add_node(vi, pos=attribute[vi])
 
         ix, iy = positions[vi]
 

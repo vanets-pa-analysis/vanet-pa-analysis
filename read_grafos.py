@@ -7,17 +7,16 @@ from natsort import natsorted
 import scripts.utils as utils
 
 import networkx as nx
-from networkx.readwrite.gpickle import read_gpickle
 
 from scripts.metrics_extractor import extractor_factory
 
 ###################################################
 
-TRACE_NAME         = "luxembourg"
+TRACE_NAME         = "santa_tereza"
 DISTANCE_THRESHOLD = "100"
-SIM_ID             = 3
-DEBUGGING          = False
-TOTAL_TIME         = 10000
+SIM_ID             = 18
+DEBUGGING          = True
+TOTAL_TIME         = 3600
 CALCULATE_METRICS  = True
 SAVE_RESULTS       = True
 
@@ -35,11 +34,12 @@ def main():
 
     for file_path in progress_bar(files, desc="Reading Graphs", unit="graph"):
 
-        G: nx.Graph = read_gpickle(file_path)
+        G: nx.Graph = nx.read_gpickle(file_path)
 
         if DEBUGGING:
             print(f"Loaded graph from: {file_path}")
             print(f"Number of nodes: {G.number_of_nodes()}")
+            print(f"Number of AP: {len(list(nx.articulation_points(G)))}")
             print(f"Number of edges: {G.number_of_edges()}")
 
         if CALCULATE_METRICS:

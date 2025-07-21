@@ -5,18 +5,19 @@ from traci import simulation as sim
 from tqdm import tqdm as progress_bar
 
 import networkx as nx
-from networkx.readwrite.gpickle import write_gpickle
 
 from scripts.build_graph import build_graph, update_vehicle_positions
 import scripts.utils as utils
 
+from scripts.utils import ap_geographical_position
+
 ###################################################
 
-TRACE_NAME                  = "luxembourg"
+TRACE_NAME                  = "santa_tereza"
 USE_GUI                     = False
 METRICS_EVERY_N_SIM_SECONDS = 60
 DISTANCE_THRESHOLD          = 100
-DEBUGGING                   = False
+DEBUGGING                   = True
 SIMULATION_WARNINGS         = False
 
 ###################################################
@@ -33,6 +34,10 @@ BOUNDS            = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME          = utils.get_end_time(SUMOCFG_FILE)
 SIM_WARNINGS_FLAG = [] if SIMULATION_WARNINGS else ["--no-warnings", "--no-step-log"]
 SUMO_CONFIG       = "sumo-gui" if USE_GUI else "sumo"
+
+
+
+
 
 def main():
 
@@ -57,9 +62,27 @@ def main():
         if step % METRICS_EVERY_N_SIM_SECONDS == 0:
 
             positions = update_vehicle_positions(subscribed_vehicles)
-            G: nx.Graph = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
 
-            write_gpickle(G, f"{output_path}/graph_{step}.gpickle")
+            #NOTE: X & Y
+            # if len(positions) > 0:
+            #     first_key = list(positions.keys())[0]
+            #     print(" pos:", positions[first_key])
+
+            lat_lon = {key: ap_geographical_position(value) for key, value in positions.items()}
+
+            #TODO: TIRAR DPS
+            #NOTE: lat lon
+            # second_key = list(new_positions.keys())[0]
+            # print("new pos:", new_positions[second_key])
+
+            G: nx.Graph = build_graph(positions, lat_lon, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
+
+            if DEBUGGING:
+                print(f"Number of nodes: {G.number_of_nodes()}")
+                print(f"Number of AP: {len(list(nx.articulation_points(G)))}")
+                print(f"Number of edges: {G.number_of_edges()}")
+
+            nx.write_gpickle(G, f"{output_path}/graph_{step}.gpickle")
 
     prog_bar.close()
     traci.close()
