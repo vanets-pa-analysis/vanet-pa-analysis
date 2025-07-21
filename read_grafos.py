@@ -14,8 +14,8 @@ from scripts.metrics_extractor import extractor_factory
 
 TRACE_NAME         = "santa_tereza"
 DISTANCE_THRESHOLD = "100"
-SIM_ID             = 18
-DEBUGGING          = True
+SIM_ID             = 20
+DEBUGGING          = False
 TOTAL_TIME         = 3600
 CALCULATE_METRICS  = True
 SAVE_RESULTS       = True
@@ -41,6 +41,9 @@ def main():
             print(f"Number of nodes: {G.number_of_nodes()}")
             print(f"Number of AP: {len(list(nx.articulation_points(G)))}")
             print(f"Number of edges: {G.number_of_edges()}")
+
+            if len(list(nx.articulation_points(G))):
+                print(f"Latitude e longitude de um qualquer", G.nodes[list(nx.articulation_points(G))[0]]["pos"])
 
         if CALCULATE_METRICS:
            metrics_extractor.extract_data(0, G)

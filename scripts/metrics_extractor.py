@@ -276,15 +276,15 @@ class AdvancedExtractor(BaseMetricExtractor):
 
         metrics, coordenates = self._extract_data(global_articulation_points, self.GLOBAL_LAST_POSITIONS, self.GLOBAL_PA_LIFESPAN)
         self.global_metrics_data.append(metrics)
-        # self.global_geographical_positions.append(coordenates)
+        self.global_geo_pos.append(coordenates)
 
         buses_metrics, coordenates = self._extract_data(articulation_points_buses, self.BUSES_LAST_POSITIONS, self.BUSES_PA_LIFESPAN)
         self.buses_metrics_data.append(buses_metrics)
-        # self.buses_geographical_positions.append(coordenates)
+        self.buses_geo_pos.append(coordenates)
 
         cars_metrics, coordenates = self._extract_data(articulation_points_cars, self.CARS_LAST_POSITIONS, self.CARS_PA_LIFESPAN)
         self.cars_metrics_data.append(cars_metrics)
-        # self.cars_geographical_positions.append(coordenates)
+        self.cars_geo_pos.append(coordenates)
 
     @override
     def save_data(self, outputPath: str) -> None:
@@ -294,6 +294,10 @@ class AdvancedExtractor(BaseMetricExtractor):
         vis.generate_histograms(self.global_metrics_data, outputPath + "global_", self.METRICAS_MAP)
         vis.generate_histograms(self.buses_metrics_data, outputPath + "buses_", self.METRICAS_MAP)
         vis.generate_histograms(self.cars_metrics_data, outputPath + "cars_", self.METRICAS_MAP)
+
+        vis.generate_heat_map(self.global_geo_pos, outputPath + "global_")
+        vis.generate_heat_map(self.buses_geo_pos, outputPath + "buses_")
+        vis.generate_heat_map(self.cars_geo_pos, outputPath + "cars_")
 
     @override
     def get_debug_data(self) -> dict:
