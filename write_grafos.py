@@ -5,15 +5,16 @@ from traci import simulation as sim
 from tqdm import tqdm as progress_bar
 
 import networkx as nx
-from networkx.readwrite.gpickle import write_gpickle
 
 from scripts.build_graph import build_graph, update_vehicle_positions
 import scripts.utils as utils
 from scripts.utils import Timer
 
+from scripts.utils import ap_geographical_position
+
 ###################################################
 
-TRACE_NAME                  = "luxembourg"
+TRACE_NAME                  = "santa_tereza"
 USE_GUI                     = False
 METRICS_EVERY_N_SIM_SECONDS = 60
 DISTANCE_THRESHOLD          = 100
@@ -79,17 +80,33 @@ def main():
 
             positions_update_timer.start()
             positions = update_vehicle_positions(subscribed_vehicles)
+            lat_lon = {key: ap_geographical_position(value) for key, value in positions.items()}
             positions_update_timer.end()
 
             graph_build_timer.start()
-            G: nx.Graph = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (USING_QUAD_TREE, BOUNDS))
+            G: nx.Graph = build_graph(positions, lat_lon, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
             graph_build_timer.end()
 
             graph_save_timer.start()
-            write_gpickle(G, f"{output_path}/graph_{step}.gpickle")
+            nx.write_gpickle(G, f"{output_path}/graph_{step}.gpickle")
             graph_save_timer.end()
 
             update_prog_bar(prog_bar, graph_build_timer, positions_update_timer, graph_save_timer, subscribed_vehicles)
+
+            if DEBUGGING:
+                print(f"Number of nodes: {G.number_of_nodes()}")
+                print(f"Number of AP: {len(list(nx.articulation_points(G)))}")
+                print(f"Number of edges: {G.number_of_edges()}")
+
+                #NOTE: X & Y
+                # if len(positions) > 0:
+                first_key = list(positions.keys())[0]
+                print(" pos:", positions[first_key])
+
+                #TODO: TIRAR DPS
+                #NOTE: lat lon
+                second_key = list(lat_lon.keys())[0]
+                print("new pos:", lat_lon[second_key])
 
     prog_bar.close()
     traci.close()
