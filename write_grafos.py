@@ -9,6 +9,7 @@ from networkx.readwrite.gpickle import write_gpickle
 
 from scripts.build_graph import build_graph, update_vehicle_positions
 import scripts.utils as utils
+from scripts.utils import Timer
 
 ###################################################
 
@@ -18,6 +19,7 @@ METRICS_EVERY_N_SIM_SECONDS = 60
 DISTANCE_THRESHOLD          = 100
 DEBUGGING                   = False
 SIMULATION_WARNINGS         = False
+USING_QUAD_TREE             = True
 
 ###################################################
 
@@ -34,18 +36,37 @@ END_TIME          = utils.get_end_time(SUMOCFG_FILE)
 SIM_WARNINGS_FLAG = [] if SIMULATION_WARNINGS else ["--no-warnings", "--no-step-log"]
 SUMO_CONFIG       = "sumo-gui" if USE_GUI else "sumo"
 
+def update_prog_bar(prog_bar: progress_bar, graph_build_timer: Timer, positions_update_timer: Timer, graph_save_timer: Timer, subscribed_vehicles: set):
+
+    # Get timings
+    pos_time = positions_update_timer.time()
+    build_time = graph_build_timer.time()
+    total_main_time = pos_time + build_time
+
+    if total_main_time > 0:
+        pos_pct = (pos_time / total_main_time) * 100
+        build_pct = 100 - pos_pct
+    else:
+        pos_pct = build_pct = 0
+
+    prog_bar.set_postfix({
+        "cars": len(subscribed_vehicles),
+        "building": f"{total_main_time:.3f}s",
+        "saving": f"{graph_save_timer.time():.3f}s",
+        "time % building/updating": f"{build_pct:.0f}/{pos_pct:.0f}"
+    })
+
 def main():
-
-    traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE] + SIM_WARNINGS_FLAG)
-
-    prog_bar = progress_bar(total=END_TIME, desc="Simulating", unit="step")
-
-    step = 0
 
     output_path = f"saved_graphs/simulation_{utils.getNextSimID("saved_graphs")}_{TRACE_NAME}_{(END_TIME):.0f}s_{DISTANCE_THRESHOLD}m/"
     os.makedirs(output_path, exist_ok = True)
 
+    prog_bar = progress_bar(total=END_TIME, desc=f"Simulating {"using QT" if USING_QUAD_TREE else "not using QT"}", unit="step")
     subscribed_vehicles = set()
+    graph_build_timer, positions_update_timer, graph_save_timer = Timer(), Timer(), Timer()
+
+    step = 0
+    traci.start([SUMO_CONFIG, "-c", SUMOCFG_FILE] + SIM_WARNINGS_FLAG)
 
     while step <= END_TIME and sim.getMinExpectedNumber() > 0:
 
@@ -56,10 +77,19 @@ def main():
 
         if step % METRICS_EVERY_N_SIM_SECONDS == 0:
 
+            positions_update_timer.start()
             positions = update_vehicle_positions(subscribed_vehicles)
-            G: nx.Graph = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (True, BOUNDS))
+            positions_update_timer.end()
 
+            graph_build_timer.start()
+            G: nx.Graph = build_graph(positions, DISTANCE_THRESHOLD, use_quadTree = (USING_QUAD_TREE, BOUNDS))
+            graph_build_timer.end()
+
+            graph_save_timer.start()
             write_gpickle(G, f"{output_path}/graph_{step}.gpickle")
+            graph_save_timer.end()
+
+            update_prog_bar(prog_bar, graph_build_timer, positions_update_timer, graph_save_timer, subscribed_vehicles)
 
     prog_bar.close()
     traci.close()

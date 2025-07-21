@@ -1,6 +1,30 @@
 import networkx as nx
 import xml.etree.ElementTree as ET
 
+import time
+
+class Timer:
+    def __init__(self):
+        self._start = None
+        self._end = None
+
+    def start(self):
+        self._start = time.perf_counter()
+        self._end = None  # Reset end in case the same timer is reused
+
+    def end(self):
+        if self._start is None:
+            raise RuntimeError("Timer has not been started.")
+        self._end = time.perf_counter()
+
+    def time(self):
+        if self._start is None:
+            raise RuntimeError("Timer has not been started.")
+        if self._end is None:
+            # If timer hasn't been stopped, measure until now
+            return time.perf_counter() - self._start
+        return self._end - self._start
+
 def getNextSimID(path = "output"):
 
     path += "/last_simulation_ID.txt"
