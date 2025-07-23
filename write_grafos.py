@@ -13,7 +13,7 @@ from scripts.utils import ap_geographical_position
 
 ###################################################
 
-TRACE_NAME                  = "santa_tereza"
+TRACE_NAME                  = "monaco"
 USE_GUI                     = False
 METRICS_EVERY_N_SIM_SECONDS = 60
 DISTANCE_THRESHOLD          = 100
@@ -32,7 +32,8 @@ TRACES_PATH = {
 SUMOCFG_FILE      = f"traces/{TRACES_PATH[TRACE_NAME]}.sumocfg"
 BOUNDS            = utils.get_simulation_bounds(SUMOCFG_FILE)
 END_TIME          = utils.get_end_time(SUMOCFG_FILE)
-# END_TIME          = 3600
+BEGIN_TIME        = utils.get_begin_time(SUMOCFG_FILE) 
+# END_TIME        = 3600
 SIM_WARNINGS_FLAG = [] if SIMULATION_WARNINGS else ["--no-warnings", "--no-step-log"]
 SUMO_CONFIG       = "sumo-gui" if USE_GUI else "sumo"
 
@@ -46,7 +47,7 @@ def main():
 
     prog_bar = progress_bar(total=END_TIME, desc="Simulating", unit="step")
 
-    step = 0
+    step = BEGIN_TIME
 
     output_path = f"saved_graphs/simulation_{utils.getNextSimID("saved_graphs")}_{TRACE_NAME}_{(END_TIME):.0f}s_{DISTANCE_THRESHOLD}m/"
     os.makedirs(output_path, exist_ok = True)
