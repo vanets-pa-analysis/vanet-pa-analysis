@@ -66,6 +66,21 @@ def get_end_time(sumocfg_path) -> int:
 
     return FULL_DAY
 
+
+def get_begin_time(sumocfg_path) -> int:
+
+    tree = ET.parse(sumocfg_path)
+    root = tree.getroot()
+
+    for time_tag in root.findall("time"):
+
+        begin = time_tag.find("begin")
+
+        if begin is not None:
+            return int(begin.attrib["value"])
+
+    return 0
+
 def extract_net_path(sumocfg_path: str) -> str:
     """
     Parses a SUMO .sumocfg file and returns the network file path (.net.xml).
