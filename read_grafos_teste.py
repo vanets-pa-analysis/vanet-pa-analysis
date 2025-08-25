@@ -9,6 +9,7 @@ import scripts.utils as utils
 import networkx as nx
 
 from scripts.metrics_extractor import extractor_factory
+from scripts.visualization import draw_graph_with_real_positions
 
 ###################################################
 
@@ -39,21 +40,34 @@ def main():
     files = list(input_path.glob("*.gpickle"))
     files = natsorted(files, key=lambda p: p.name)
 
-    for file_path in progress_bar(files, desc="Reading Graphs", unit="graph"):
+    print("lendo grafo")
+    largest_graph_filepath: Path = files[-100]
+    largest_graph: nx.Graph = nx.read_gpickle(largest_graph_filepath)
+    print("terminou de ler grafo")
 
-        G: nx.Graph = nx.read_gpickle(file_path)
+    # draw_graph_with_real_positions(largest_graph)
 
-        if DEBUGGING:
-            print(f"Loaded graph from: {file_path}")
-            print(f"Number of nodes: {G.number_of_nodes()}")
-            print(f"Number of AP: {len(list(nx.articulation_points(G)))}")
-            print(f"Number of edges: {G.number_of_edges()}")
+    # for file_path in progress_bar(files, desc="Reading Graphs", unit="graph"):
 
-            if len(list(nx.articulation_points(G))):
-                print(f"Latitude e longitude de um qualquer", G.nodes[list(nx.articulation_points(G))[0]]["pos"])
+    #     G: nx.Graph = nx.read_gpickle(file_path)
 
-        if CALCULATE_METRICS:
-           metrics_extractor.extract_data(0, G)
+    #     if G.number_of_nodes() > largest_graph.number_of_nodes():
+    #         largest_graph = G
+    #         largest_graph_filepath = file_path
+
+    # print(f"largest_graph_filepath: {largest_graph_filepath}")
+
+    if DEBUGGING:
+        print(f"Loaded graph from: {largest_graph_filepath}")
+        print(f"Number of nodes: {largest_graph.number_of_nodes()}")
+        print(f"Number of edges: {largest_graph.number_of_edges()}")
+        print(f"Number of AP: {len(list(nx.articulation_points(largest_graph)))}")
+
+        # if len(list(nx.articulation_points(largest_graph))):
+        #     print(f"Latitude e longitude de um qualquer", largest_graph.nodes[list(nx.articulation_points(largest_graph))[0]]["pos"])
+
+    if CALCULATE_METRICS:
+       metrics_extractor.extract_data(0, largest_graph)
 
     if SAVE_RESULTS:
         outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{TOTAL_TIME:.0f}s_{DISTANCE_THRESHOLD}m/"

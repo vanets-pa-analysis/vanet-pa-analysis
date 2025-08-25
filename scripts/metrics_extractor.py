@@ -9,6 +9,7 @@ from scripts.build_graph import build_graph, update_vehicle_positions
 import networkx as nx
 from networkx.algorithms.connectivity import local_node_connectivity
 
+from scripts.utils import Timer
 import scripts.visualization as vis
 
 class BaseMetricExtractor(ABC):
@@ -109,31 +110,118 @@ class BaseMetricExtractor(ABC):
 
         if n == 0: return metrics, geographical_positions
 
+        timers = {
+            "betweenness"                   : Timer(),
+            "degree"                        : Timer(),
+            "closeness"                     : Timer(),
+            "eigenvector"                   : Timer(),
+            "lifespan"                      : Timer(),
+            "mobility"                      : Timer(),
+            "fragmentation_impact"          : Timer(),
+            "k_connectivity"                : Timer(),
+            "number_of_connected_components": Timer(),
+        }
+
+        print("Começando eigenvector")
+        timers["eigenvector"].start()
         try:
             eigenvector = nx.eigenvector_centrality(self.G, max_iter = 500)
         except nx.PowerIterationFailedConvergence:
             eigenvector = {node: 0 for node in self.G.nodes()}
+        timers["eigenvector"].end()
+        print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
 
-        betweenness = nx.betweenness_centrality(self.G)
+        print("Começando closeness")
+        timers["closeness"].start()
         closeness   = nx.closeness_centrality(self.G)
+        timers["closeness"].end()
+        print(f"Time taken to calculate closeness: {timers['closeness']}")
+
+        print("Começando betweenness")
+        timers["betweenness"].start()
+        betweenness = nx.betweenness_centrality(self.G)
+        timers["betweenness"].end()
+        print(f"Time taken to calculate betweenness: {timers['betweenness']}")
+
+        print("Começando number_of_connected_components")
+        timers["number_of_connected_components"].start()
         components  = nx.number_connected_components(self.G)
+        timers["number_of_connected_components"].end()
+        print(f"Time taken to calculate number_of_connected_components: {timers['number_of_connected_components']}")
 
         for ap in articulation_points:
 
             pa_lifespan[ap] = pa_lifespan.get(ap, 0) + 1
 
+            print("Começando betweenness")
+
+            timers["betweenness"].start()
             metrics["betweenness"]          += betweenness[ap]
+            timers["betweenness"].end()
+
+            print(f"Time taken to calculate betweenness: {timers['betweenness']}")
+
+            print("Começando degree")
+
+            timers["degree"].start()
             metrics["degree"]               += self.G.degree(ap)
+            timers["degree"].end()
+
+            print(f"Time taken to calculate degree: {timers['degree']}")
+
+            print("Começando closeness")
+
+            timers["closeness"].start()
             metrics["closeness"]            += closeness[ap]
+            timers["closeness"].end()
+
+            print(f"Time taken to calculate closeness: {timers['closeness']}")
+
+            print("Começando eigenvector")
+
+            timers["eigenvector"].start()
             metrics["eigenvector"]          += eigenvector[ap]
+            timers["eigenvector"].end()
+
+            print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
+
+            print("Começando lifespan")
+
+            timers["lifespan"].start()
             metrics["lifespan"]             += pa_lifespan[ap]
+            timers["lifespan"].end()
+
+            print(f"Time taken to calculate lifespan: {timers['lifespan']}")
+
+            print("Começando mobility")
+
+            timers["mobility"].start()
             metrics["mobility"]             += self.relative_mobility(ap, last_positions)
+            timers["mobility"].end()
+
+            print(f"Time taken to calculate mobility: {timers['mobility']}")
+
+            print("Começando fragmentation_impact")
+
+            timers["fragmentation_impact"].start()
             metrics["fragmentation_impact"] += self.fragmentation_impact(ap) - components
-            # metrics["k_connectivity"]       += min(local_node_connectivity(self.G, ap, v) for v in self.G.nodes if v != ap)
+            timers["fragmentation_impact"].end()
+
+            print(f"Time taken to calculate fragmentation_impact: {timers['fragmentation_impact']}")
+
+            print("Começando k_connectivity")
+
+            timers["k_connectivity"].start()
+            metrics["k_connectivity"]       += min(local_node_connectivity(self.G, ap, v) for v in self.G.nodes if v != ap)
+            timers["k_connectivity"].end()
+
+            print(f"Time taken to calculate k_connectivity: {timers['k_connectivity']}")
 
             geographical_positions.append(self.G.nodes[ap]["pos"])
 
         self._calculate_average(metrics, n)
+
+        print("---------------------------------------------------")
 
         return metrics, geographical_positions
 

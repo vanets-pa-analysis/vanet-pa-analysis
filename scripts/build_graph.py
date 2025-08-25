@@ -99,7 +99,7 @@ def update_vehicle_positions(subscribed_vehicles: set) -> dict:
 #     else:
 #         compare_graphs(G1, G2)
 #         qt.print()
-#         draw_graph_with_real_positions(G2, positions, draw_radius=True)
+        # draw_graph_with_real_positions(G2, positions, draw_radius=True)
 #         draw_graph_with_real_positions(G1, positions, draw_radius=True)
 
 def compare_graphs(G1, G2):

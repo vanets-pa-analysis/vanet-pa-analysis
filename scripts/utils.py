@@ -1,9 +1,6 @@
 import networkx as nx
-import pickle
 import xml.etree.ElementTree as ET
-
-<<<<<<< HEAD
-import time
+import traci, time
 
 class Timer:
     def __init__(self):
@@ -26,9 +23,9 @@ class Timer:
             # If timer hasn't been stopped, measure until now
             return time.perf_counter() - self._start
         return self._end - self._start
-=======
-import traci
->>>>>>> gabriel
+
+    def __str__(self) -> str:
+        return f"{self.time():.6f}"
 
 def getNextSimID(path = "output"):
 

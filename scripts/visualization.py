@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from numbers import Number
 from folium.plugins import HeatMap
 
-def draw_graph_with_real_positions(G, positions, save_path=None, show=True, draw_radius=False, radius=100):
+def draw_graph_with_real_positions(G, save_path=None, show=True, draw_radius=False, radius=100):
 
     """
     Desenha o grafo com os nós posicionados em suas coordenadas reais (x, y),
@@ -22,6 +22,8 @@ def draw_graph_with_real_positions(G, positions, save_path=None, show=True, draw
         radius (float): O raio em metros para os círculos.
     """
     plt.figure(figsize=(10, 10))
+
+    positions = { v: G.nodes[v]["pos"] for v in G.nodes() }
 
     # Desenha o grafo com posições reais
     nx.draw(
