@@ -1,3 +1,4 @@
+from os import mkdir
 from pathlib import Path
 
 from tqdm import tqdm as progress_bar
@@ -12,13 +13,17 @@ from scripts.metrics_extractor import extractor_factory
 
 ###################################################
 
-TRACE_NAME         = "luxembourg"
-DISTANCE_THRESHOLD = "100"
-SIM_ID             = 5
-DEBUGGING          = True
-TOTAL_TIME         = 86400
-CALCULATE_METRICS  = True
-SAVE_RESULTS       = True
+TRACE_NAME            = "luxembourg"
+DISTANCE_THRESHOLD    = "100"
+SIM_ID                = 5
+DEBUGGING             = False
+TOTAL_TIME            = 86400
+CALCULATE_METRICS     = True
+SAVE_RESULTS          = True
+WRITE_THROUGH         = SAVE_RESULTS and True
+NUM_PCS               = 60
+PC_ID                 = 1
+GRAFOS_JA_PROCESSADOS = 0
 
 ###################################################
 
@@ -39,9 +44,23 @@ def main():
     files = list(input_path.glob("*.gpickle"))
     files = natsorted(files, key=lambda p: p.name)
 
+    files = files[GRAFOS_JA_PROCESSADOS:]
+
+    file_number = -1
+
+    outputPath: str = ""
+
+    if SAVE_RESULTS:
+        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{TOTAL_TIME:.0f}s_{DISTANCE_THRESHOLD}m/"
+        mkdir(outputPath)
+
     for file_path in progress_bar(files, desc="Reading Graphs", unit="graph"):
 
-        G: nx.Graph = nx.read_gpickle(file_path)
+        file_number += 1
+
+        if file_number % NUM_PCS != PC_ID: continue
+
+        G: nx.Graph = utils.read_gpickle(file_path)
 
         if DEBUGGING:
             print(f"Loaded graph from: {file_path}")
@@ -55,8 +74,10 @@ def main():
         if CALCULATE_METRICS:
            metrics_extractor.extract_data(0, G)
 
+        if WRITE_THROUGH:
+            metrics_extractor.save_csv(outputPath, PC_ID, NUM_PCS)
+
     if SAVE_RESULTS:
-        outputPath = f"output/simulation_{utils.getNextSimID()}_{TRACE_NAME}_{TOTAL_TIME:.0f}s_{DISTANCE_THRESHOLD}m/"
         metrics_extractor.save_data(outputPath)
 
     print("Metrics successfully extracted!")

@@ -9,7 +9,7 @@ from scripts.metrics_extractor import extractor_factory
 ###################################################
 
 TRACE_NAME                  = "luxembourg"
-USE_GUI                     = False
+USE_GUI                     = True
 METRICS_EVERY_N_SIM_SECONDS = 60
 DISTANCE_THRESHOLD          = 100
 DEBUGGING                   = False

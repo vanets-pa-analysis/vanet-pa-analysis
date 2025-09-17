@@ -2,11 +2,11 @@ TODO:
 	- Ajeitar os horários do histograma
 	- Rodar simulações com Luxemburgo e Monaco
 	- Ler: Como foi contruído o trace de Luxemburgo https://ieeexplore.ieee.org/document/7906642
-	- Alterar o jeito que salvamos as posicoes, para salvar lat / lon de uma vez
 
 -----------------------------------------------------------------------------------
 
 FEITOS:
+	- Alterar o jeito que salvamos as posicoes, para salvar lat / lon de uma vez
 	- Gerar os outputfiles de tal modo que o nome do trace/mapa/cidade esteja no nome do arquivo, e que um arquivo não sobrescreva o outro, arq01, arq02, ar03
 	- Incluir no histograma para cada horário informações sobre a rede
 	- fazer o código e gerar heatmap e histograma com traces reais
@@ -14,7 +14,7 @@ FEITOS:
 	- Ser capaz de extrair informações específicas de cada tipo diferente de veículo
 		- Pensar na modelagem disso
 	- Arrumar Kconnectivity
-	- salvar 'positinos' no grafo, para restaura com .gpickle
+	- salvar 'positions' no grafo, para restaura com .gpickle
 	- Separar simulação / geração dos grafos da extração das métricas
 
 -----------------------------------------------------------------------------------

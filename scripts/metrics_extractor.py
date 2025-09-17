@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import traci
 
 from abc import ABC, abstractmethod
@@ -12,6 +13,8 @@ from networkx.algorithms.connectivity import local_node_connectivity
 from scripts.utils import Timer
 import scripts.visualization as vis
 
+from scripts.utils import ap_geographical_position
+
 class BaseMetricExtractor(ABC):
 
     G: nx.Graph = nx.Graph()
@@ -23,6 +26,7 @@ class BaseMetricExtractor(ABC):
     USE_QUAD_TREE: bool | tuple
     METRICS_EVERY_N_SECONDS: int
     DEBUGGING: bool
+    HEADER_CREATED: bool = False
 
     METRICAS_MAP = {
         "betweenness": ["Normalized Mean", "Average AP Betweenness Centrality"],
@@ -32,7 +36,7 @@ class BaseMetricExtractor(ABC):
         "lifespan": ["Time (s)", "Average AP Lifespan"],
         "mobility": ["Percentage (%)", "Average AP Mobility"],
         "fragmentation_impact": ["Normalized Value", "Fragmentation Impact"],
-        # "k_connectivity": ["Integer (k)", "K-Connectivity"],
+        "k_connectivity": ["Integer (k)", "K-Connectivity"],
         "number_of_articulation_points": ["Number of Articulation Points", "Number of Articulation Points"],
         "articulation_points_percentage": ["Articulation Points (%)", "Proportion of Articulation Points among Vehicles"],
         "density": ["Density (%)", "Graph Density"],
@@ -54,7 +58,68 @@ class BaseMetricExtractor(ABC):
     def extract_data(self, step: float, G = None) -> None: pass
 
     @abstractmethod
-    def save_data(self, outputPath: str) -> None: pass
+    def save_data(self, outputPath: str, access_mode: str = "w") -> None: pass
+
+    def get_last_saved_step(self, nome_arquivo):
+
+        with open(nome_arquivo, "rb+") as f:  # leitura/escrita binária
+
+            f.seek(0, 2)  # vai pro final do arquivo
+
+            pos = f.tell() - 1
+
+            # pula quebras de linha no fim do arquivo
+            while pos >= 0:
+                f.seek(pos)
+                if f.read(1) != b"\n":
+                    break
+                pos -= 1
+
+            # agora volta até encontrar a quebra de linha anterior
+            while pos >= 0:
+                f.seek(pos)
+                if f.read(1) == b"\n":
+                    break
+                pos -= 1
+
+            # lê a última linha e converte para string
+            ultima_linha = f.readline().decode("utf-8").rstrip("\n")
+            # print(f"ultima_linha: {ultima_linha}")
+
+            # divide por vírgulas e retorna o primeiro elemento
+            partes = ultima_linha.split(",")
+            return partes[0] if partes else "0"
+
+    @abstractmethod
+    def save_csv(self, outputPath, PC_ID: int, NUM_PCS: int) -> None: pass
+
+    def _save_csv(self, metrics, metrics_map, outputPath, PC_ID: int, NUM_PCS: int) -> None:
+
+        outputPath += "histogram.csv"
+
+        file_exists = Path(outputPath).exists()
+
+        # Salvar histograma
+        with open(outputPath, "a" if file_exists else "w") as file:
+
+            if not self.HEADER_CREATED:
+
+                csv_header = ["time"]
+
+                for key in metrics_map:
+                    csv_header.append(key)
+                self.HEADER_CREATED = True
+
+                file.write(",".join(csv_header) + "\n")
+
+            current_step: int
+            try:
+                current_step = int(self.get_last_saved_step(outputPath)) + NUM_PCS
+            except Exception:
+                current_step = PC_ID
+
+            values = [f"{current_step}"] + [f"{metrics[metric_key]:.4g}" for metric_key in metrics_map]
+            file.write(",".join(values) + "\n")
 
     @abstractmethod
     def get_debug_data(self) -> dict: pass
@@ -92,6 +157,7 @@ class BaseMetricExtractor(ABC):
         n: int = len(articulation_points)
 
         geographical_positions = []
+
         metrics = {
             "betweenness"                   : 0.0,
             "degree"                        : 0.0,
@@ -111,117 +177,101 @@ class BaseMetricExtractor(ABC):
         if n == 0: return metrics, geographical_positions
 
         timers = {
-            "betweenness"                   : Timer(),
-            "degree"                        : Timer(),
-            "closeness"                     : Timer(),
-            "eigenvector"                   : Timer(),
-            "lifespan"                      : Timer(),
-            "mobility"                      : Timer(),
-            "fragmentation_impact"          : Timer(),
-            "k_connectivity"                : Timer(),
-            "number_of_connected_components": Timer(),
+            "betweenness"                    : Timer(),
+            "degree"                         : Timer(),
+            "closeness"                      : Timer(),
+            "eigenvector"                    : Timer(),
+            "lifespan"                       : Timer(),
+            "mobility"                       : Timer(),
+            "fragmentation_impact"           : Timer(),
+            "k_connectivity"                 : Timer(),
+            "number_of_connected_components" : Timer(),
         }
 
-        print("Começando eigenvector")
+        if self.DEBUGGING: print("Começando eigenvector")
         timers["eigenvector"].start()
         try:
             eigenvector = nx.eigenvector_centrality(self.G, max_iter = 500)
         except nx.PowerIterationFailedConvergence:
             eigenvector = {node: 0 for node in self.G.nodes()}
         timers["eigenvector"].end()
-        print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
+        if self.DEBUGGING: print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
 
-        print("Começando closeness")
+        if self.DEBUGGING: print("Começando closeness")
         timers["closeness"].start()
         closeness   = nx.closeness_centrality(self.G)
         timers["closeness"].end()
-        print(f"Time taken to calculate closeness: {timers['closeness']}")
+        if self.DEBUGGING: print(f"Time taken to calculate closeness: {timers['closeness']}")
 
-        print("Começando betweenness")
+        if self.DEBUGGING: print("Começando betweenness")
         timers["betweenness"].start()
         betweenness = nx.betweenness_centrality(self.G)
         timers["betweenness"].end()
-        print(f"Time taken to calculate betweenness: {timers['betweenness']}")
+        if self.DEBUGGING: print(f"Time taken to calculate betweenness: {timers['betweenness']}")
 
-        print("Começando number_of_connected_components")
+        if self.DEBUGGING: print("Começando number_of_connected_components")
         timers["number_of_connected_components"].start()
         components  = nx.number_connected_components(self.G)
         timers["number_of_connected_components"].end()
-        print(f"Time taken to calculate number_of_connected_components: {timers['number_of_connected_components']}")
+        if self.DEBUGGING: print(f"Time taken to calculate number_of_connected_components: {timers['number_of_connected_components']}")
 
         for ap in articulation_points:
 
             pa_lifespan[ap] = pa_lifespan.get(ap, 0) + 1
 
-            print("Começando betweenness")
-
+            if self.DEBUGGING: print("Começando betweenness")
             timers["betweenness"].start()
             metrics["betweenness"]          += betweenness[ap]
             timers["betweenness"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate betweenness: {timers['betweenness']}")
 
-            print(f"Time taken to calculate betweenness: {timers['betweenness']}")
-
-            print("Começando degree")
-
+            if self.DEBUGGING: print("Começando degree")
             timers["degree"].start()
             metrics["degree"]               += self.G.degree(ap)
             timers["degree"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate degree: {timers['degree']}")
 
-            print(f"Time taken to calculate degree: {timers['degree']}")
-
-            print("Começando closeness")
-
+            if self.DEBUGGING: print("Começando closeness")
             timers["closeness"].start()
             metrics["closeness"]            += closeness[ap]
             timers["closeness"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate closeness: {timers['closeness']}")
 
-            print(f"Time taken to calculate closeness: {timers['closeness']}")
-
-            print("Começando eigenvector")
-
+            if self.DEBUGGING: print("Começando eigenvector")
             timers["eigenvector"].start()
             metrics["eigenvector"]          += eigenvector[ap]
             timers["eigenvector"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
 
-            print(f"Time taken to calculate eigenvector: {timers['eigenvector']}")
-
-            print("Começando lifespan")
-
+            if self.DEBUGGING: print("Começando lifespan")
             timers["lifespan"].start()
             metrics["lifespan"]             += pa_lifespan[ap]
             timers["lifespan"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate lifespan: {timers['lifespan']}")
 
-            print(f"Time taken to calculate lifespan: {timers['lifespan']}")
-
-            print("Começando mobility")
-
+            if self.DEBUGGING: print("Começando mobility")
             timers["mobility"].start()
             metrics["mobility"]             += self.relative_mobility(ap, last_positions)
             timers["mobility"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate mobility: {timers['mobility']}")
 
-            print(f"Time taken to calculate mobility: {timers['mobility']}")
-
-            print("Começando fragmentation_impact")
-
+            if self.DEBUGGING: print("Começando fragmentation_impact")
             timers["fragmentation_impact"].start()
             metrics["fragmentation_impact"] += self.fragmentation_impact(ap) - components
             timers["fragmentation_impact"].end()
+            if self.DEBUGGING: print(f"Time taken to calculate fragmentation_impact: {timers['fragmentation_impact']}")
 
-            print(f"Time taken to calculate fragmentation_impact: {timers['fragmentation_impact']}")
-
-            print("Começando k_connectivity")
-
+            if self.DEBUGGING: print("Começando k_connectivity")
             timers["k_connectivity"].start()
             metrics["k_connectivity"]       += min(local_node_connectivity(self.G, ap, v) for v in self.G.nodes if v != ap)
             timers["k_connectivity"].end()
-
-            print(f"Time taken to calculate k_connectivity: {timers['k_connectivity']}")
+            if self.DEBUGGING: print(f"Time taken to calculate k_connectivity: {timers['k_connectivity']}")
 
             geographical_positions.append(self.G.nodes[ap]["pos"])
 
         self._calculate_average(metrics, n)
 
-        print("---------------------------------------------------")
+        if self.DEBUGGING: print("---------------------------------------------------")
 
         return metrics, geographical_positions
 
@@ -307,9 +357,11 @@ class SimpleExtractor(BaseMetricExtractor):
         self.geographical_positions.append(coordenates)
 
     @override
-    def save_data(self, outputPath: str) -> None:
+    def save_data(self, outputPath: str, access_mode: str = "w") -> None:
+
         os.makedirs(outputPath, exist_ok = True)
-        vis.generate_histograms(self.metrics_data, outputPath, self.METRICAS_MAP)
+
+        vis.generate_histograms(self.metrics_data, outputPath, self.METRICAS_MAP, access_mode)
         vis.generate_heat_map(self.geographical_positions, outputPath)
 
     @override
@@ -340,7 +392,9 @@ class AdvancedExtractor(BaseMetricExtractor):
 
         if G == None:
             positions = update_vehicle_positions(self.subscribed_vehicles)
-            self.G = build_graph(positions, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
+            lat_lon = {key: ap_geographical_position(value) for key, value in positions.items()}
+            self.G = build_graph(positions, lat_lon, self.DISTANCE_THRESHOLD, self.USE_QUAD_TREE)
+            vis.draw_graph_with_real_positions(self.G, draw_radius=True)
         else:
             self.G = G
 
@@ -375,17 +429,23 @@ class AdvancedExtractor(BaseMetricExtractor):
         self.cars_geo_pos.append(coordenates)
 
     @override
-    def save_data(self, outputPath: str) -> None:
+    def save_data(self, outputPath: str, access_mode: str = "w") -> None:
 
         os.makedirs(outputPath, exist_ok = True)
 
-        vis.generate_histograms(self.global_metrics_data, outputPath + "global_", self.METRICAS_MAP)
-        vis.generate_histograms(self.buses_metrics_data, outputPath + "buses_", self.METRICAS_MAP)
-        vis.generate_histograms(self.cars_metrics_data, outputPath + "cars_", self.METRICAS_MAP)
+        vis.generate_histograms(self.global_metrics_data, outputPath + "global_", self.METRICAS_MAP, access_mode)
+        vis.generate_histograms(self.buses_metrics_data, outputPath + "buses_", self.METRICAS_MAP, access_mode)
+        vis.generate_histograms(self.cars_metrics_data, outputPath + "cars_", self.METRICAS_MAP, access_mode)
 
         vis.generate_heat_map(self.global_geo_pos, outputPath + "global_")
         vis.generate_heat_map(self.buses_geo_pos, outputPath + "buses_")
         vis.generate_heat_map(self.cars_geo_pos, outputPath + "cars_")
+
+    @override
+    def save_csv(self, outputPath, PC_ID: int, NUM_PCS: int) -> None:
+        self._save_csv(self.global_metrics_data[-1], self.METRICAS_MAP, outputPath, PC_ID, NUM_PCS)
+        self._save_csv(self.cars_metrics_data[-1], self.METRICAS_MAP, outputPath, PC_ID, NUM_PCS)
+        self._save_csv(self.buses_metrics_data[-1], self.METRICAS_MAP, outputPath, PC_ID, NUM_PCS)
 
     @override
     def get_debug_data(self) -> dict:

@@ -7,15 +7,17 @@ import matplotlib.pyplot as plt
 from numbers import Number
 from folium.plugins import HeatMap
 
-def draw_graph_with_real_positions(G, save_path=None, show=True, draw_radius=False, radius=100):
+import networkx as nx
+import matplotlib.pyplot as plt
+import pyproj
 
+def draw_graph_with_real_positions(G: nx.Graph, save_path=None, show=True, draw_radius=False, radius=100):
     """
-    Desenha o grafo com os nós posicionados em suas coordenadas reais (x, y),
-    com a opção de desenhar um raio ao redor de cada nó.
+    Desenha o grafo com os nós posicionados em suas coordenadas reais (lat, lon),
+    convertendo para coordenadas em metros para escala correta.
 
     Parâmetros:
         G (networkx.Graph): O grafo com os veículos como nós.
-        positions (dict): Dicionário {vehicle_id: (x, y)} com posições dos veículos.
         save_path (str): Caminho para salvar a imagem (opcional).
         show (bool): Se True, exibe a imagem. Se False, apenas salva (se save_path for definido).
         draw_radius (bool): Se True, desenha círculos de raio `radius` ao redor de cada nó.
@@ -23,12 +25,28 @@ def draw_graph_with_real_positions(G, save_path=None, show=True, draw_radius=Fal
     """
     plt.figure(figsize=(10, 10))
 
-    positions = { v: G.nodes[v]["pos"] for v in G.nodes() }
+    # Extrair lat/lon
+    latlon_positions = {v: G.nodes[v]["pos"] for v in G.nodes()}
 
-    # Desenha o grafo com posições reais
+    # Converter para coordenadas projetadas (em metros) usando pyproj
+    # Aqui usamos WGS84 -> UTM automático baseado na posição média
+    lats = [lat for lat, lon in latlon_positions.values()]
+    lons = [lon for lat, lon in latlon_positions.values()]
+    mean_lat, mean_lon = sum(lats) / len(lats), sum(lons) / len(lons)
+
+    # Definir projeção UTM baseada no centro
+    utm_zone = int((mean_lon + 180) // 6) + 1
+    proj = pyproj.Proj(proj="utm", zone=utm_zone, ellps="WGS84")
+
+    projected_positions = {
+        v: proj(lon, lat)  # (x, y) em metros
+        for v, (lat, lon) in latlon_positions.items()
+    }
+
+    # Desenha o grafo com coordenadas em metros
     nx.draw(
         G,
-        pos=positions,
+        pos=projected_positions,
         node_size=30,
         node_color='blue',
         edge_color='gray',
@@ -38,13 +56,13 @@ def draw_graph_with_real_positions(G, save_path=None, show=True, draw_radius=Fal
     # Desenha círculos de raio ao redor dos nós
     if draw_radius:
         ax = plt.gca()
-        for x, y in positions.values():
+        for x, y in projected_positions.values():
             circle = plt.Circle((x, y), radius, color='red', fill=False, linestyle='--', linewidth=0.5)
             ax.add_patch(circle)
 
     plt.xlabel("X (metros)")
     plt.ylabel("Y (metros)")
-    plt.title("Vehicle Graph with Real Positions")
+    plt.title("Vehicle Graph with GPS Positions (converted to meters)")
     plt.axis("equal")
 
     if save_path:
@@ -107,12 +125,12 @@ def generate_heat_map(geoPosAPs, outputPath):
     # Salvar o HTML interativo
     m.save(outputPath + "heatmap_pa.html")
 
-def save_csv(metrics, outputPath, metrics_map):
+def save_csv(metrics, outputPath, metrics_map, access_mode = "w"):
 
     outputPath += "histogram.csv"
 
     # Salvar histograma
-    with open(outputPath, "w") as file:
+    with open(outputPath, access_mode) as file:
 
         csv_header = ["time"]
 
@@ -127,9 +145,9 @@ def save_csv(metrics, outputPath, metrics_map):
 
     return outputPath
 
-def generate_histograms(metrics, output_path, metrics_map):
+def generate_histograms(metrics, output_path, metrics_map, access_mode: str = "w"):
 
-    csv_file_path = save_csv(metrics, output_path, metrics_map)
+    csv_file_path = save_csv(metrics, output_path, metrics_map, access_mode)
     df = pd.read_csv(csv_file_path)
 
     # Converter time em formato legível
